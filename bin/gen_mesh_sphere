@@ -1,0 +1,47 @@
+#!/bin/bash
+#Script to generate sphere files from an arbitrary mesh (.PLY/.STL/.OFF/.FSMESH)
+
+#Input mesh to start from
+inp_mesh=$1
+
+#Reference mesh to match
+ref_fs=$2
+
+#Constants
+#Smoothing for curvature estimation, we use less since re-meshing implicitly smooths the mesh
+curv_smoothing=3
+
+#Extract filename w/o extension 
+inp_dir=$(dirname "$inp_mesh")
+inp_name=$(basename "$inp_mesh")
+hemi_with_type="$inp_dir/${inp_name%.*}"
+
+#Need to build in white/grey matter differentiation, should only need white sphere
+if [[ "$string" == *"pial" ]] ; then
+	echo "Surface is pial, will not process further"
+	exit
+fi
+
+#Convert mesh --> stl --> freesurfer surface
+meshfix "$inp_mesh" --no-clean --stl -o "$hemi_with_type.stl"
+mris_convert "$hemi_with_type.stl" "$hemi_with_type"
+
+#Add volume geometry information
+mris_copy_header "$hemi_with_type" "$ref_fs" "$hemi_with_type"
+
+#Get hemisphere (lh/rh)
+hemisphere="$inp_dir"/$(basename "$hemi_with_type" | cut -d '.' -f1)
+
+#Don't smooth the white matter, could probably just copy with new name instead
+mris_smooth -n 0 -nw "$hemi_with_type" "$hemisphere.smoothwm"
+
+#Make inflated surface
+mris_inflate "$hemisphere.smoothwm" "$hemisphere.inflated"
+
+#Make .curv file
+mris_curvature -a "$curv_smoothing" -w "$hemisphere.white"
+cp "$hemisphere.white.H" "$hemisphere.curv"
+
+#Make registration sphere
+mris_sphere "$hemisphere.inflated" "$hemisphere.sphere"
+
