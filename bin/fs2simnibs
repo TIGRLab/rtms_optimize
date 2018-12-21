@@ -1,0 +1,47 @@
+#!/bin/bash
+# Given a subject name in $SUBJECTS_DIR, enter file and generate the 256x256x256 T1fs_roi.nii.gz file needed by simNIBS head reconstruction.
+#ARG 1 - SUBJECT NAME
+#ARG 2 - SIMNIBS OUTPUT BASE DIRECTORY
+
+#Safety
+cleanup(){
+	rm -rf "$tmp"
+}
+trap cleanup EXIT
+
+#Set up Defaults
+MNI=$FSLDIR/data/standard/MNI152_T1_1mm.nii.gz
+conform=256
+
+#Pathing
+SUBJECT=$1
+SUBJECT_PATH=$SUBJECTS_DIR/$SUBJECT
+MRI_PATH=$SUBJECT_PATH/mri/
+SIMNIBS_OUTPUT=$2
+orig=$MRI_PATH/orig.mgz
+tmp=$(mktemp -d "$SUBJECT_PATH/simnibs_tmp.XXX")
+
+#Convert orig.mgz into FSL compliant file, then convert LIA --> LAS for cleaner FLIRTing
+FSL_orig=$tmp/orig.nii.gz
+mri_convert -i "$orig" -o "$FSL_orig"
+fslswapdim "$FSL_orig" RL PA IS "$FSL_orig"
+
+#Use MNI --> T1 warp to determine cut-off region along the Z axis (LAS)
+flirt -in "$MNI" -ref "$FSL_orig" -out "$tmp/orig_MNI.nii.gz"
+boundaries=$(fslstats "$tmp/orig_MNI.nii.gz" -w)
+min_z=$(echo "$boundaries" | awk '{print $5}')
+size_z=$(echo $conform - "$min_z" | bc)
+
+#Chop off neck
+fslroi "$FSL_orig" "$FSL_orig" 0 -1 0 -1 "$min_z" "$size_z"
+
+#Create padding file and merge with chopped file
+x_vox=$(mri_info --cres "$FSL_orig")
+y_vox=$(mri_info --rres "$FSL_orig")
+z_vox=$(mri_info --sres "$FSL_orig")
+fslcreatehd "$conform" "$conform" "$min_z" 1 "$x_vox" "$y_vox" "$z_vox" 1 0 0 0 16 "$tmp/zblock"
+fslmerge -z "$FSL_orig" "$tmp/zblock" "$FSL_orig"
+
+#Move to output and clear tmp
+mv "$FSL_orig" "$SIMNIBS_OUTPUT/$SUBJECT/m2m_$SUBJECT/T1fs_roi.nii.gz"
+rm -rf "$tmp"
