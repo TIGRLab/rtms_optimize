@@ -16,32 +16,82 @@ inp_dir=$(dirname "$inp_mesh")
 inp_name=$(basename "$inp_mesh")
 hemi_with_type="$inp_dir/${inp_name%.*}"
 
-#Need to build in white/grey matter differentiation, should only need white sphere
-if [[ "$string" == *"pial" ]] ; then
-	echo "Surface is pial, will not process further"
-	exit
-fi
 
 #Convert mesh --> stl --> freesurfer surface
 meshfix "$inp_mesh" --no-clean --stl -o "$hemi_with_type.stl"
 mris_convert "$hemi_with_type.stl" "$hemi_with_type"
 
+
 #Add volume geometry information
 mris_copy_header "$hemi_with_type" "$ref_fs" "$hemi_with_type"
 
+#Need to build in white/grey matter differentiation, should only need white sphere
+if [[ "$hemi_with_type" == *"pial" ]] ; then
+	echo "Surface is pial, will not process further"
+	exit
+fi
+
 #Get hemisphere (lh/rh)
-hemisphere="$inp_dir"/$(basename "$hemi_with_type" | cut -d '.' -f1)
+p_hemisphere="$inp_dir"/$(basename "$hemi_with_type" | cut -d '.' -f1)
 
 #Don't smooth the white matter, could probably just copy with new name instead
-mris_smooth -n 0 -nw "$hemi_with_type" "$hemisphere.smoothwm"
+mris_smooth -n 0 -nw "$hemi_with_type" "$p_hemisphere.smoothwm"
 
 #Make inflated surface
-mris_inflate "$hemisphere.smoothwm" "$hemisphere.inflated"
+mris_inflate "$p_hemisphere.smoothwm" "$p_hemisphere.inflated"
 
 #Make .curv file
-mris_curvature -a "$curv_smoothing" -w "$hemisphere.white"
-cp "$hemisphere.white.H" "$hemisphere.curv"
+mris_curvature -a "$curv_smoothing" -w "$p_hemisphere.white"
+cp "$p_hemisphere.white.H" "$p_hemisphere.curv"
 
 #Make registration sphere
-mris_sphere "$hemisphere.inflated" "$hemisphere.sphere"
+mris_sphere "$p_hemisphere.inflated" "$p_hemisphere.sphere"
+echo "Finished generating topological sphere"
+
+#Generate native mesh --> fsaverage registration
+mris_register "$p_hemisphere.sphere" "$FREESURFER_HOME/average/$p_hemisphere.average.curvature.filled.buckner40.tif" "$p_hemisphere.sphere.reg"
+
+#Extract L/R
+base_hemisphere=$(basename "$p_hemisphere")
+HEMI_SHORT=${base_hemisphere^^}
+HEMI_SHORT=${HEMI_SHORT:0:1}
+
+#Get STRUCTURE name
+declare -A struct_map
+struct_map=( ['L']="CORTEX_LEFT" ['R']="CORTEX_RIGHT")
+STRUCTURE=${struct_map[$HEMI_SHORT]}
+
+#Get mesh directory
+ATLAS_DIR=/projects/jjeyachandra/ciftify/ciftify/data/standard_mesh_atlases/
+
+#Define the native space GIFTI name
+NATIVE_SPHERE="$p_hemisphere.sphere.$HEMI_SHORT.surf.gii"
+NATIVE_REG_SPHERE="$p_hemisphere.sphere.reg.$HEMI_SHORT.surf.gii"
+
+#Convert spheres to GIFTI
+mris_convert "$p_hemisphere.sphere" "$NATIVE_SPHERE"
+mris_convert "$p_hemisphere.sphere.reg" "$NATIVE_REG_SPHERE"
+
+#Set to SPHERICAL structure
+wb_command -set-structure "$NATIVE_SPHERE" "$STRUCTURE" -surface-type "SPHERICAL"
+wb_command -set-structure "$NATIVE_REG_SPHERE" "$STRUCTURE" -surface-type "SPHERICAL"
+
+#Get template registration spheres from connectome workbench and define output name
+SPHERE_PROJ="$ATLAS_DIR/fs_$HEMI_SHORT/fsaverage.$HEMI_SHORT.sphere.164k_fs_$HEMI_SHORT.surf.gii"
+SPHERE_UNPROJ="$ATLAS_DIR/fs_$HEMI_SHORT/fs_$HEMI_SHORT-to-fs_LR_fsaverage.${HEMI_SHORT}_LR.spherical_std.164k_fs_$HEMI_SHORT.surf.gii"
+REG_LR_SPHERE="$inp_dir/sphere.reg.reg_LR.$HEMI_SHORT.native.surf.gii"
+
+#Make registration to fs_LR_164k. Basically a concatenation of matrix transforms w/1 resampling step
+wb_command -surface-sphere-project-unproject "$NATIVE_REG_SPHERE" "$SPHERE_PROJ" "$SPHERE_UNPROJ" "$REG_LR_SPHERE"
+
+#Compute affine transformation from native --> fs_LR_164k sphere
+wb_command -surface-affine-regression "$NATIVE_SPHERE" "$REG_LR_SPHERE" "$HEMI_SHORT.mat"
+
+#Apply approximate transformation of native sphere to fs_LR_164k
+ROT_SPHERE="$inp_dir/sphere_rot.$HEMI_SHORT.surf.gii"
+wb_command -apply-affine-regression "$NATIVE_SPHERE" "$HEMI_SHORT.mat" "$ROT_SPHERE"
+
+#Set radius to 100
+wb_command -surface-modify-sphere "$ROT_SPHERE" "100" "$ROT_SPHERE"
+
 
