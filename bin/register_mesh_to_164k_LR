@@ -7,7 +7,7 @@ inp_mesh=$1
 #Reference freesurfer mesh to match
 ref_fs=$2
 
-#Subject reference 164k mesh from ciftify
+#Subject reference 164k mesh from ciftify (also in HCP standard mesh atlases)
 ref_ciftify=$3
 
 #Constants
@@ -19,6 +19,9 @@ inp_dir=$(dirname "$inp_mesh")
 inp_name=$(basename "$inp_mesh")
 hemi_with_type="$inp_dir/${inp_name%.*}"
 
+
+#Default location of configuration file
+CONF=/projects/jjeyachandra/rtms_optimize/MSMSulcStrainFinalconf
 
 #Convert mesh --> stl --> freesurfer surface
 meshfix "$inp_mesh" --no-clean --stl -o "$hemi_with_type.stl"
@@ -110,7 +113,13 @@ ref_sphere="$ref_ciftify"
 ref_data="$ATLAS_DIR/$HEMI_SHORT.refsulc.164k_fs_LR.shape.gii"
 msm_sphere="$inp_dir/$HEMI_SHORT.sphere.reg_msm.surf.gii"
 
-msm --inmesh "$inp_sphere" --refmesh "$ref_sphere" --indata "$inp_data" --refdata "$ref_data" --out "$inp_dir/$HEMI_SHORT."
+msm --inmesh="$inp_sphere" \ --indata="$inp_data" \\
+	--refmesh="$ref_sphere" --refdata="$ref_data" \\ 
+	--conf=$CONF --out="$inp_dir/$HEMI_SHORT."
+
 mv "$inp_dir/$HEMI_SHORT.sphere.reg.surf.gii" "$msm_sphere"
 wb_command -set-structure "$msm_sphere" "$STRUCTURE"
+
+#DONE
+echo "Successfully registered $inp_mesh to 164k_fs_LR space"
 
