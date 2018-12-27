@@ -35,8 +35,7 @@ Perform registration to MNINonLinear/Native using MSM. Then should be able to re
 - [x] Perform MSMSulc registration between mesh-generated sphere --> 164k MNINonLinear Native (or perhaps a lower resolution fs_LR_32k)
 - [ ] Resample individualized parcellation from MNINonLinear/fs_LR_32k --> MNINonLinear/Native_164k 
 
-
-Since coordinate will approximately (urghh) match the tetrahedral vertices can match exactly I think...
+Since we'll be moving from surface mesh --> tetrahedral volumetric mesh. We'll use the surface points generated from Freesurfer as the correspondence points since the volumetric conversion of a mesh should not alter the surface vertices. We'll then fill tetrahedra with parcellation values if and only if the associated tetrahedra is a grey-matter component.
 
 ## Bayesian Optimization of rTMS Field Distribution
 
