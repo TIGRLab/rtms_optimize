@@ -4,8 +4,11 @@
 #Input mesh to start from
 inp_mesh=$1
 
-#Reference mesh to match
+#Reference freesurfer mesh to match
 ref_fs=$2
+
+#Subject reference 164k mesh from ciftify
+ref_ciftify=$3
 
 #Constants
 #Smoothing for curvature estimation, we use less since re-meshing implicitly smooths the mesh
@@ -89,9 +92,25 @@ wb_command -surface-affine-regression "$NATIVE_SPHERE" "$REG_LR_SPHERE" "$HEMI_S
 
 #Apply approximate transformation of native sphere to fs_LR_164k
 ROT_SPHERE="$inp_dir/sphere_rot.$HEMI_SHORT.surf.gii"
-wb_command -apply-affine-regression "$NATIVE_SPHERE" "$HEMI_SHORT.mat" "$ROT_SPHERE"
+wb_command -surface-apply-affine "$NATIVE_SPHERE" "$HEMI_SHORT.mat" "$ROT_SPHERE"
 
 #Set radius to 100
 wb_command -surface-modify-sphere "$ROT_SPHERE" "100" "$ROT_SPHERE"
 
+#Set up sulcal depth map for msm to match on: Convert to metric, height-->depth, and set structure
+NATIVE_SULC="$inp_dir/sulc.$HEMI_SHORT.shape.gii"
+mris_convert -c "$p_hemisphere.sulc" "$p_hemisphere.white" "$NATIVE_SULC"
+wb_command -metric-math 'a*(-1)' -var 'a' "$NATIVE_SULC"
+wb_command -set-structure "$NATIVE_SULC" "$STRUCTURE"
+
+#MSM SULC, need subject ciftify directory
+inp_sphere="$ROT_SPHERE"
+inp_data="$NATIVE_SULC"
+ref_sphere="$ref_ciftify"
+ref_data="$ATLAS_DIR/$HEMI_SHORT.refsulc.164k_fs_LR.shape.gii"
+msm_sphere="$inp_dir/$HEMI_SHORT.sphere.reg_msm.surf.gii"
+
+msm --inmesh "$inp_sphere" --refmesh "$ref_sphere" --indata "$inp_data" --refdata "$ref_data" --out "$inp_dir/$HEMI_SHORT."
+mv "$inp_dir/$HEMI_SHORT.sphere.reg.surf.gii" "$msm_sphere"
+wb_command -set-structure "$msm_sphere" "$STRUCTURE"
 
