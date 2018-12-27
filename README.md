@@ -11,3 +11,30 @@ Establish a correspondence between the individualized functional network parcell
 #### Requirements:
 Since we're modelling the grey matter and the volumetric mesh contains representations for different tissue types, we don't just want a surface projection but a **surface to discrete volume projection**, since this will better model the regions that we want to stimulate since it will have finite volume. 
 
+#### Progress Notes:
+
+## Cross-registration of simNIBS $\implies$ fs_LR_32k
+
+#### Components to work with:
+1. simNIBS surface sphere with sulcal depth topology
+2. fs_LR_32k standardized surface. 
+
+Perform registration to MNINonLinear/Native using MSM. Then should be able to re-sample the individualizd parcellations over, or alternatively should try to re-sample the sulcal surface onto fs_LR_32k. 
+
+#### Steps to implement
+- [x] Convert freesurfer spherical surface into GIFTI format
+- [x] Convert freesurfer sulcal depth map to GIFTI metric map (.shape.gii)
+- [x] Generate sphere.reg from Native to fsaverage
+- [x] Generate registration sphere from Native --> fsaverage --> fs_LR_164k using -surface-sphere-project-unproject
+- [x] Make MSMSulc source sphere
+  - [x] Assign structure
+  - [x] Convert height --> depth map
+  - [x] Apply alignment transformation of native to fsaverage_LR_164k
+  - [x] Apply affine registration
+  - [x] Set radius at 100
+- [x] Perform MSMSulc registration between mesh-generated sphere --> 164k MNINonLinear Native (or perhaps a lower resolution fs_LR_32k)
+- [ ] Resample individualized parcellation from MNINonLinear/fs_LR_32k $\implies$ MNINonLinear/Native_164k 
+
+
+Since coordinate will approximately (urghh) match the tetrahedral vertices can match exactly I think...
+
