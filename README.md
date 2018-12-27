@@ -38,3 +38,11 @@ Perform registration to MNINonLinear/Native using MSM. Then should be able to re
 
 Since coordinate will approximately (urghh) match the tetrahedral vertices can match exactly I think...
 
+## Bayesian Optimization of rTMS Field Distribution
+
+We're using a Bayesian Optimization approach here since evaluating the objective function (simulating the field distribution for a given position of the coil) is expensive. In addition we don't have direct access to the gradient information so a sampling approach is called for. 
+
+Optimization will therefore be performed using Bayesian Optimization with Gaussian Process priors. We can justify the use of this since we expect changing electric field distributions over the target area to be a smooth function with many local maxima. 
+
+Toolbox to be used: [fmfn/BayesianOptimization](https://github.com/fmfn/BayesianOptimization).
+
