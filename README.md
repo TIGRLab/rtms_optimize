@@ -13,7 +13,7 @@ Since we're modelling the grey matter and the volumetric mesh contains represent
 
 #### Progress Notes:
 
-## Cross-registration of simNIBS $\implies$ fs_LR_32k
+## Cross-registration of simNIBS -->fs_LR_32k
 
 #### Components to work with:
 1. simNIBS surface sphere with sulcal depth topology
