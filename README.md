@@ -39,9 +39,7 @@ Since we'll be moving from surface mesh --> tetrahedral volumetric mesh. We'll u
 
 ## Bayesian Optimization of rTMS Field Distribution
 
-We're using a Bayesian Optimization approach here since evaluating the objective function (simulating the field distribution for a given position of the coil) is expensive. In addition we don't have direct access to the gradient information so a sampling approach is called for. 
-
-Optimization will therefore be performed using Bayesian Optimization with Gaussian Process priors. We can justify the use of this since we expect changing electric field distributions over the target area to be a smooth function with many local maxima. 
+We're using a Bayesian Optimization approach here since evaluating the objective function (simulating the field distribution for a given position of the coil) is expensive. In addition we don't have direct access to the gradient information since we'll be working on a non-linear cost function with a constrained parameter surface (smoothed surface projected orthogonally from participant's head) so a sampling approach is called for. Using Bayesian Optimization with Gaussian Process priors assumes that our underlying objective function is continuous and smooth over our position/orientation parameters - this is not unreasonable. 
 
 Toolbox to be used: [fmfn/BayesianOptimization](https://github.com/fmfn/BayesianOptimization).
 
