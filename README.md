@@ -19,7 +19,7 @@ Since we're modelling the grey matter and the volumetric mesh contains represent
 1. simNIBS surface sphere with sulcal depth topology
 2. fs_LR_32k standardized surface. 
 
-Perform registration to MNINonLinear/Native using MSM. Then should be able to re-sample the individualizd parcellations over, or alternatively should try to re-sample the sulcal surface onto fs_LR_32k. 
+Perform registration to MNINonLinear/Native using MSM. Then should be able to re-sample the individualized parcellations over, or alternatively should try to re-sample the sulcal surface onto fs_LR_32k. 
 
 #### Steps to implement
 - [x] Convert freesurfer spherical surface into GIFTI format
@@ -33,7 +33,7 @@ Perform registration to MNINonLinear/Native using MSM. Then should be able to re
   - [x] Apply affine registration
   - [x] Set radius at 100
 - [x] Perform MSMSulc registration between mesh-generated sphere --> 164k MNINonLinear Native (or perhaps a lower resolution fs_LR_32k)
-- [ ] Resample individualized parcellation from MNINonLinear/fs_LR_32k $\implies$ MNINonLinear/Native_164k 
+- [ ] Resample individualized parcellation from MNINonLinear/fs_LR_32k --> MNINonLinear/Native_164k 
 
 
 Since coordinate will approximately (urghh) match the tetrahedral vertices can match exactly I think...
