@@ -113,7 +113,7 @@ ref_sphere="$ref_ciftify"
 ref_data="$ATLAS_DIR/$HEMI_SHORT.refsulc.164k_fs_LR.shape.gii"
 msm_sphere="$inp_dir/$HEMI_SHORT.sphere.reg_msm.surf.gii"
 
-msm --inmesh="$inp_sphere" \ --indata="$inp_data" \\
+msm --inmesh="$inp_sphere"  --indata="$inp_data" \\
 	--refmesh="$ref_sphere" --refdata="$ref_data" \\ 
 	--conf=$CONF --out="$inp_dir/$HEMI_SHORT."
 
