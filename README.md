@@ -43,3 +43,4 @@ We're using a Bayesian Optimization approach here since evaluating the objective
 
 Toolbox to be used: [fmfn/BayesianOptimization](https://github.com/fmfn/BayesianOptimization).
 
+##### Consideration: Parallelization of sampling and update approach? 
