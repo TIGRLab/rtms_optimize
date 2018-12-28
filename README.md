@@ -45,7 +45,10 @@ We're using a Bayesian Optimization approach here since evaluating the objective
 Toolbox to be used: [fmfn/BayesianOptimization](https://github.com/fmfn/BayesianOptimization).
 
 ##### Consideration: Parallelization of sampling and update approach? 
-[Parallel Bayesian Global Optimization of Expensive Functions
+
+[Cornell-MOE](https://github.com/wujian16/Cornell-MOE) and the associated paper: [Parallel Bayesian Global Optimization of Expensive Functions
 ](https://arxiv.org/abs/1602.05149)
 
 [Asynchronous Parallel Bayesian Optimisation via Thompson Sampling](https://arxiv.org/abs/1705.09236)
+
+
