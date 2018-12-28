@@ -1,5 +1,17 @@
 #!/bin/bash
-#Script to generate sphere files from an arbitrary mesh (.PLY/.STL/.OFF/.FSMESH)
+#Script to generate MSM sphere files from an arbitrary mesh (.PLY/.STL/.OFF/.FSMESH)
+#Will generate surface files and save them into input directory
+
+#Exit msg
+fail() {
+
+	echo "register_mesh_to_164k_LR failed!"
+	echo "Exiting!"
+	exit 1
+
+}
+
+trap fail EXIT
 
 #Input mesh to start from
 inp_mesh=$1
@@ -23,6 +35,7 @@ hemi_with_type="$inp_dir/${inp_name%.*}"
 #Default location of configuration file
 CONF=/projects/jjeyachandra/rtms_optimize/MSMSulcStrainFinalconf
 
+echo "Converting remeshed surface to Freesurfer..."
 #Convert mesh --> stl --> freesurfer surface
 meshfix "$inp_mesh" --no-clean --stl -o "$hemi_with_type.stl"
 mris_convert "$hemi_with_type.stl" "$hemi_with_type"
@@ -31,12 +44,14 @@ mris_convert "$hemi_with_type.stl" "$hemi_with_type"
 #Add volume geometry information
 mris_copy_header "$hemi_with_type" "$ref_fs" "$hemi_with_type"
 
+echo "Finished conversion to Freesurfer Surface"
 #Need to build in white/grey matter differentiation, should only need white sphere
 if [[ "$hemi_with_type" == *"pial" ]] ; then
 	echo "Surface is pial, will not process further"
 	exit
 fi
 
+echo "Generating topological sphere..."
 #Get hemisphere (lh/rh)
 p_hemisphere="$inp_dir"/$(basename "$hemi_with_type" | cut -d '.' -f1)
 
@@ -52,11 +67,13 @@ cp "$p_hemisphere.white.H" "$p_hemisphere.curv"
 
 #Make registration sphere
 mris_sphere "$p_hemisphere.inflated" "$p_hemisphere.sphere"
-echo "Finished generating topological sphere"
 
 #Generate native mesh --> fsaverage registration
 mris_register "$p_hemisphere.sphere" "$FREESURFER_HOME/average/$p_hemisphere.average.curvature.filled.buckner40.tif" "$p_hemisphere.sphere.reg"
 
+echo "Finished generating FreeSurfer topological sphere"
+
+echo "Beginning construction of MSMSulc input files..."
 #Extract L/R
 base_hemisphere=$(basename "$p_hemisphere")
 HEMI_SHORT=${base_hemisphere^^}
@@ -74,6 +91,8 @@ ATLAS_DIR=/projects/jjeyachandra/ciftify/ciftify/data/standard_mesh_atlases/
 NATIVE_SPHERE="$p_hemisphere.sphere.$HEMI_SHORT.surf.gii"
 NATIVE_REG_SPHERE="$p_hemisphere.sphere.reg.$HEMI_SHORT.surf.gii"
 
+
+echo "Converting Freesurfer topological spheres to GIFTI format"
 #Convert spheres to GIFTI
 mris_convert "$p_hemisphere.sphere" "$NATIVE_SPHERE"
 mris_convert "$p_hemisphere.sphere.reg" "$NATIVE_REG_SPHERE"
@@ -83,6 +102,7 @@ wb_command -set-structure "$NATIVE_SPHERE" "$STRUCTURE" -surface-type "SPHERICAL
 wb_command -set-structure "$NATIVE_REG_SPHERE" "$STRUCTURE" -surface-type "SPHERICAL"
 
 #Get template registration spheres from connectome workbench and define output name
+echo "Performing registration onto FS_LR_164K"
 SPHERE_PROJ="$ATLAS_DIR/fs_$HEMI_SHORT/fsaverage.$HEMI_SHORT.sphere.164k_fs_$HEMI_SHORT.surf.gii"
 SPHERE_UNPROJ="$ATLAS_DIR/fs_$HEMI_SHORT/fs_$HEMI_SHORT-to-fs_LR_fsaverage.${HEMI_SHORT}_LR.spherical_std.164k_fs_$HEMI_SHORT.surf.gii"
 REG_LR_SPHERE="$inp_dir/sphere.reg.reg_LR.$HEMI_SHORT.native.surf.gii"
@@ -90,6 +110,8 @@ REG_LR_SPHERE="$inp_dir/sphere.reg.reg_LR.$HEMI_SHORT.native.surf.gii"
 #Make registration to fs_LR_164k. Basically a concatenation of matrix transforms w/1 resampling step
 wb_command -surface-sphere-project-unproject "$NATIVE_REG_SPHERE" "$SPHERE_PROJ" "$SPHERE_UNPROJ" "$REG_LR_SPHERE"
 
+
+echo "Performing spherical rotation into fs_LR_164k"
 #Compute affine transformation from native --> fs_LR_164k sphere
 wb_command -surface-affine-regression "$NATIVE_SPHERE" "$REG_LR_SPHERE" "$HEMI_SHORT.mat"
 
@@ -100,6 +122,7 @@ wb_command -surface-apply-affine "$NATIVE_SPHERE" "$HEMI_SHORT.mat" "$ROT_SPHERE
 #Set radius to 100
 wb_command -surface-modify-sphere "$ROT_SPHERE" "100" "$ROT_SPHERE"
 
+echo "Setting up sulcal depth map"
 #Set up sulcal depth map for msm to match on: Convert to metric, height-->depth, and set structure
 NATIVE_SULC="$inp_dir/sulc.$HEMI_SHORT.shape.gii"
 mris_convert -c "$p_hemisphere.sulc" "$p_hemisphere.white" "$NATIVE_SULC"
@@ -113,6 +136,7 @@ ref_sphere="$ref_ciftify"
 ref_data="$ATLAS_DIR/$HEMI_SHORT.refsulc.164k_fs_LR.shape.gii"
 msm_sphere="$inp_dir/$HEMI_SHORT.sphere.reg_msm.surf.gii"
 
+echo "Performing MSM spherical deformation to match fs_LR_164k"
 msm --inmesh="$inp_sphere"  --indata="$inp_data" \\
 	--refmesh="$ref_sphere" --refdata="$ref_data" \\ 
 	--conf=$CONF --out="$inp_dir/$HEMI_SHORT."
@@ -122,4 +146,3 @@ wb_command -set-structure "$msm_sphere" "$STRUCTURE"
 
 #DONE
 echo "Successfully registered $inp_mesh to 164k_fs_LR space"
-
