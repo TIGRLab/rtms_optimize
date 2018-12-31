@@ -1,0 +1,51 @@
+#!/bin/bash
+
+#SIMNIBS output directory
+SIMNIBS_SDIR=/projects/jjeyachandra/rtms_optimize/data/simnibs_output/
+
+#BIDS subject name
+simnibs_sub="$1"
+
+#fsaverage 164k sphere directory
+template_dir="/projects/jjeyachandra/rtms_optimize/resources/"
+
+#Directory to intermediate outputs used to form registration mesh
+interm_dir="$SIMNIBS_SDIR/m2m_${simnibs_sub}/intermediate/"
+
+#script
+script=/projects/jjeyachandra/rtms_optimize/bin/register_mesh_to_164k_LR
+
+
+run_registration(){
+
+	#Local variable for function
+	local i=$1
+
+	# Break each pseudo-tuple into pairs
+	inp_mesh_basename=$(echo "$i" | cut -d ',' -f1)
+	ref_fs_basename=$(echo "$i" | cut -d ',' -f2)
+
+	# Get arguments for registration script
+	inp_mesh="$interm_dir/$inp_mesh_basename"
+	ref_fs="$SIMNIBS_SDIR/$simnibs_sub/surf/$ref_fs_basename"
+
+	# Get L/R 
+	HEMI_SHORT=${inp_mesh_basename^^}
+	HEMI_SHORT=${HEMI_SHORT:0:1}
+
+	# Find template
+	ref_ciftify=$(find "$template_dir" -type f -name "fsaverage.${HEMI_SHORT}_LR*gii")
+
+	# Run command
+	echo "$script" "$inp_mesh" "$ref_fs" "$ref_ciftify"
+
+}
+
+#Loop through pairs of input_mesh/reference_meshes/ciftify_meshes
+for i in "rh.pial.off,rh.pial" "lh.pial.off,lh.pial" "rh.white.off,rh.white" "lh.white.off,lh.white"; do
+
+	echo -n ""
+	run_registration $i &
+
+done
+

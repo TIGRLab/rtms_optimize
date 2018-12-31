@@ -3,6 +3,11 @@
 #ARG 1 - SUBJECT NAME
 #ARG 2 - SIMNIBS OUTPUT BASE DIRECTORY
 
+##NOTE
+# This script works in that simNIBS doesn't crash and burn but it produces sub-optimal head meshes. 
+# Need to figure out why this is the case, but using the ciftify-freesurfer outputs should theoretically be better than using two different freesurfer reconstructions as a baseline
+
+
 #Safety
 cleanup(){
 	rm -rf "$tmp"
