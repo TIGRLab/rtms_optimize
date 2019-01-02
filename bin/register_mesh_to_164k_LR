@@ -135,15 +135,17 @@ wb_command -surface-sphere-project-unproject "$NATIVE_REG_SPHERE" "$SPHERE_PROJ"
 
 
 stdprint "Performing spherical rotation into fs_LR_164k"
+
 #Compute affine transformation from native --> fs_LR_164k sphere
-wb_command -surface-affine-regression "$NATIVE_SPHERE" "$REG_LR_SPHERE" "$HEMI_SHORT.mat"
+AFFINE_MAT="$inp_dir/$HEMI_SHORT.mat"
+wb_command -surface-affine-regression "$NATIVE_SPHERE" "$REG_LR_SPHERE" "$AFFINE_MAT"
 
 #Perform SVD on the 3x3 rotation matrix and normalize scaling eigenvectors
-"${RTMSBIN}"/normalize_rotation.py "$HEMI_SHORT.mat" "$HEMI_SHORT.mat"
+"${RTMSBIN}"/normalize_rotation.py "$AFFINE_MAT" "$AFFINE_MAT"
 
 #Apply approximate transformation of native sphere to fs_LR_164k
 ROT_SPHERE="$inp_dir/sphere_rot.$HEMI_SHORT.surf.gii"
-wb_command -surface-apply-affine "$NATIVE_SPHERE" "$HEMI_SHORT.mat" "$ROT_SPHERE"
+wb_command -surface-apply-affine "$NATIVE_SPHERE" "$AFFINE_MAT" "$ROT_SPHERE"
 
 #Set radius to 100
 wb_command -surface-modify-sphere "$ROT_SPHERE" "100" "$ROT_SPHERE"
