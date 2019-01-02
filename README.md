@@ -39,7 +39,7 @@ Perform registration to MNINonLinear/Native using MSM. Then should be able to re
 Since we'll be moving from surface mesh --> tetrahedral volumetric mesh. We'll use the surface points generated from Freesurfer as the correspondence points since the volumetric conversion of a mesh should not alter the surface vertices. We'll then fill tetrahedra with parcellation values if and only if the associated tetrahedra is a grey-matter component.
 
 #### Additional Issues to address:
-- [ ] Upgrade from MSM_HOCR_v2 --> MSM_HOCR_v3 using source repo [MSM_HOC]R](https://github.com/ecr05/MSM_HOCR)
+- [ ] Upgrade from MSM_HOCR_v2 --> MSM_HOCR_v3 using source repo [MSM_HOCR](https://github.com/ecr05/MSM_HOCR)
 - [ ] Implement SVD removal of scaling/translational components after computing linear warp from native to fsaverage
 
 ## Bayesian Optimization of an rTMS Field Distribution-derived Objective Function
