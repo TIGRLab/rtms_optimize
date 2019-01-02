@@ -38,6 +38,10 @@ Perform registration to MNINonLinear/Native using MSM. Then should be able to re
 
 Since we'll be moving from surface mesh --> tetrahedral volumetric mesh. We'll use the surface points generated from Freesurfer as the correspondence points since the volumetric conversion of a mesh should not alter the surface vertices. We'll then fill tetrahedra with parcellation values if and only if the associated tetrahedra is a grey-matter component.
 
+#### Additional Issues to address:
+- [x] Upgrade from MSM_HOCR_v2 --> MSM_HOCR_v3 using source repo [MSM_HOCR](https://github.com/ecr05/MSM_HOCR)
+- [ ] Implement SVD removal of scaling/translational components after computing linear warp from native to fsaverage
+
 ## Bayesian Optimization of an rTMS Field Distribution-derived Objective Function
 
 We're using a Bayesian Optimization approach here since evaluating the objective function (simulating the field distribution for a given position of the coil) is expensive. In addition we don't have direct access to the gradient information since we'll be working on a non-linear cost function with a constrained parameter surface (smoothed surface projected orthogonally from participant's head) so a sampling approach is called for. Using Bayesian Optimization with Gaussian Process priors assumes that our underlying objective function is continuous and smooth over our position/orientation parameters - this is not unreasonable. 
