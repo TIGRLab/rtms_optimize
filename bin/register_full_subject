@@ -21,6 +21,9 @@ run_registration(){
 	#Local variable for function
 	local i=$1
 
+	#Get logging output
+	log_out=$(basename "$inp_mesh").log
+
 	# Break each pseudo-tuple into pairs
 	inp_mesh_basename=$(echo "$i" | cut -d ',' -f1)
 	ref_fs_basename=$(echo "$i" | cut -d ',' -f2)
@@ -37,7 +40,7 @@ run_registration(){
 	ref_ciftify=$(find "$template_dir" -type f -name "fsaverage.${HEMI_SHORT}_LR*gii")
 
 	# Run command
-	echo "$script" "$inp_mesh" "$ref_fs" "$ref_ciftify"
+	"$script" "$inp_mesh" "$ref_fs" "$ref_ciftify"
 
 }
 
