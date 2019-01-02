@@ -51,7 +51,7 @@ hemi_with_type="$inp_dir/${inp_name%.*}"
 
 
 #Default location of configuration file
-CONF=/projects/jjeyachandra/rtms_optimize/MSMSulcStrainFinalconf
+CONF=/projects/jjeyachandra/rtms_optimize/config/MSMSulcStrainFinalconf
 
 stdprint "Converting remeshed surface to Freesurfer..."
 #Convert mesh --> stl --> freesurfer surface
@@ -146,13 +146,13 @@ ROT_SPHERE="$inp_dir/sphere_rot.$HEMI_SHORT.surf.gii"
 wb_command -surface-apply-affine "$NATIVE_SPHERE" "$HEMI_SHORT.mat" "$ROT_SPHERE"
 
 #Set radius to 100
-wb_command -surface-modify-sphere "$ROT_SPHERE" "100" "$ROT_SPHERE" -recenter
+wb_command -surface-modify-sphere "$ROT_SPHERE" "100" "$ROT_SPHERE"
 
 stdprint "Setting up sulcal depth map"
 #Set up sulcal depth map for msm to match on: Convert to metric, height-->depth, and set structure
 NATIVE_SULC="$inp_dir/sulc.$HEMI_SHORT.shape.gii"
 mris_convert -c "$p_hemisphere.sulc" "$p_hemisphere.white" "$NATIVE_SULC"
-wb_command -metric-math 'a*(-1)' -var 'a' "$NATIVE_SULC"
+wb_command -metric-math 'a*(-1)' -var 'a' "$NATIVE_SULC" "$NATIVE_SULC"
 wb_command -set-structure "$NATIVE_SULC" "$STRUCTURE"
 
 #MSM SULC, need subject ciftify directory
@@ -163,8 +163,8 @@ ref_data="$ATLAS_DIR/$HEMI_SHORT.refsulc.164k_fs_LR.shape.gii"
 msm_sphere="$inp_dir/$HEMI_SHORT.sphere.reg_msm.surf.gii"
 
 stdprint "Performing MSM spherical deformation to match fs_LR_164k"
-msm --inmesh="$inp_sphere"  --indata="$inp_data" \\
-	--refmesh="$ref_sphere" --refdata="$ref_data" \\
+"$RTMSBIN"/msm --inmesh="$inp_sphere"  --indata="$inp_data" \
+	--refmesh="$ref_sphere" --refdata="$ref_data" \
 	--conf=$CONF --out="$inp_dir/$HEMI_SHORT."
 
 mv "$inp_dir/$HEMI_SHORT.sphere.reg.surf.gii" "$msm_sphere"
