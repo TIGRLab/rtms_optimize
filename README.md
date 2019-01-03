@@ -41,6 +41,7 @@ Since we'll be moving from surface mesh --> tetrahedral volumetric mesh. We'll u
 #### Additional Issues to address:
 - [x] Upgrade from MSM_HOCR_v2 --> MSM_HOCR_v3 using source repo [MSM_HOCR](https://github.com/ecr05/MSM_HOCR)
 - [x] Implement SVD removal of scaling/translational components after computing linear warp from native to fsaverage
+- [x] Use areal distortion maps as methods to check quality/reliability of surface alignment
 
 ## Bayesian Optimization of an rTMS Field Distribution-derived Objective Function
 
