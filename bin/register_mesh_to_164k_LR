@@ -135,7 +135,6 @@ wb_command -surface-sphere-project-unproject "$NATIVE_REG_SPHERE" "$SPHERE_PROJ"
 
 
 stdprint "Performing spherical rotation into fs_LR_164k"
-
 #Compute affine transformation from native --> fs_LR_164k sphere
 AFFINE_MAT="$inp_dir/$HEMI_SHORT.mat"
 wb_command -surface-affine-regression "$NATIVE_SPHERE" "$REG_LR_SPHERE" "$AFFINE_MAT"
@@ -149,6 +148,7 @@ wb_command -surface-apply-affine "$NATIVE_SPHERE" "$AFFINE_MAT" "$ROT_SPHERE"
 
 #Set radius to 100
 wb_command -surface-modify-sphere "$ROT_SPHERE" "100" "$ROT_SPHERE"
+
 
 stdprint "Setting up sulcal depth map"
 #Set up sulcal depth map for msm to match on: Convert to metric, height-->depth, and set structure
@@ -168,9 +168,13 @@ stdprint "Performing MSM spherical deformation to match fs_LR_164k"
 "$RTMSBIN"/msm --inmesh="$inp_sphere"  --indata="$inp_data" \
 	--refmesh="$ref_sphere" --refdata="$ref_data" \
 	--conf=$CONF --out="$inp_dir/$HEMI_SHORT."
-
 mv "$inp_dir/$HEMI_SHORT.sphere.reg.surf.gii" "$msm_sphere"
 wb_command -set-structure "$msm_sphere" "$STRUCTURE"
+
+stdprint "Generating Areal Distortion Map"
+areal_distortion="$inp_dir/$HEMI_SHORT.areal_distortion.shape.gii"
+wb_command -surface-distortion "$inp_sphere" "$msm_sphere" "$areal_distortion" 
+
 
 #DONE
 stdprint "Successfully registered $inp_mesh to 164k_fs_LR space"
