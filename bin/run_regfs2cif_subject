@@ -1,0 +1,6 @@
+#!/bin/bash
+subject=$1
+outdir=$2
+
+#Wrapper script to running lh/rh in parallel
+printf "lh\nrh" | xargs -I {} echo "$RTMSBIN/register_fs_to_ciftify" "$subject" "{}" "$outdir" | parallel --line-buffer 
