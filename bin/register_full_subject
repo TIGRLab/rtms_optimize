@@ -30,7 +30,7 @@ run_registration(){
 
 	# Get arguments for registration script
 	inp_mesh="$interm_dir/$inp_mesh_basename"
-	ref_fs="$SIMNIBS_SDIR/$simnibs_sub/surf/$ref_fs_basename"
+	ref_fs="$SIMNIBS_SDIR/fs_$simnibs_sub/surf/$ref_fs_basename"
 
 	# Get L/R 
 	HEMI_SHORT=${inp_mesh_basename^^}
