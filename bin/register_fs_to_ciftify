@@ -1,0 +1,155 @@
+#!/bin/bash
+
+#Positional arguments:
+# SUBJECT			simNIBS subject name
+# HEMISPHERE			Freesurfer hemisphere (lh/rh)
+# OUTDIR			Directory to output files, will make if non-existant
+
+#Expected Environment variables
+#SUBJECTS_DIR --> freesurfer SUBJECTS_DIR environment variable
+
+#Description
+# This script will take an existing freesurfer subject output directory and register it to fs_LR_32k
+# Connectome-workbench style files will outputted into OUTDIR
+
+#	House-cleaning functions
+
+close(){
+	STATUS=$?
+	if [ "$STATUS" == 0 ]; then
+		echo "register_fs_to_ciftify finished, Exiting..."
+	else
+		echo "register_fs_to_ciftify failed!"
+		echo "Exiting!"
+		exit 1
+	fi
+
+}
+
+stdprint(){
+	echo "#######################"
+	echo "$1"
+	echo "#######################"
+}
+
+checkvar(){
+
+	if ! [ -z $1 ]; then
+
+		echo "$2 doesn't exist!"
+		close
+
+	fi
+
+}
+
+trap close ERR
+
+
+#	Set-up main pipeline inputs and constants
+
+subject=$1
+hemisphere=$2
+outdir=$3
+
+conf=/projects/jjeyachandra/rtms_optimize/config/MSMSulcStrainFinalconf
+atlasdir=/projects/jjeyachandra/rtms_optimize/resources/
+surfdir="$SUBJECTS_DIR/fs_$SUBJECT/surf/"
+
+#	STAGE 0: Check if required inputs exist
+stdprint "Checking inputs and required environment variables"
+checkvar $RTMSBIN RTMSBIN
+checkvar $SUBJECTS_DIR SUBJECTS_DIR
+checkvar $subject "subject (arg 1)"
+checkvar $hemisphere "hemisphere (arg 2)"
+checkvar $outdir "outdir (arg 3)"
+
+echo "Making output directory $outdir..."
+mkdir -p $outdir
+
+#	STAGE 1: Conversion into connectome-workbench format
+
+stdprint "Converting freesurfer topological spheres to GIFTI format"
+
+
+hemicode=${hemisphere:0:1}
+hemicode=${hemicode^^}
+
+declare -A struct_map
+struct_map=( ['L']="CORTEX_LEFT" ['R']="CORTEX_RIGHT")
+structure=${struct_map[$hemicode]}
+
+#Output variables
+native_sphere="$outdir/fs_$subject.$hemicode.sphere.surf.gii"
+native_reg_sphere="$outdir/fs_$subject.$hemicode.sphere.reg.surf.gii"
+
+
+mris_convert "$surfdir/$hemisphere.sphere" "$outdir/$native_sphere"
+mris_convert "$surfdir/$hemisphere.sphere.reg" "$outdir/$native_reg_sphere"
+wb_command -set-structure "$native_sphere" "$structure" -surface-type "SPHERICAL"
+wb_command -set-structure "$native_reg_sphere" "$structure" -surface-type "SPHERICAL"
+
+#	STAGE 2: Spherical deformation method
+
+stdprint "Performing registration to fs_LR_164k"
+sphere_proj="$atlasdir/fsaverage.$hemicode.sphere.164k_fs_$hemicode.surf.gii"
+sphere_unproj="$atlasdir/fs_$hemicode-to-fs_LR_fsaverage.$hemicode_LR.spherical_std.164k_fs_$hemicode.surf.gii"
+reg_lr_sphere="$outdir/fs_$subject.$hemicode.sphere.reg.reg_LR.native.surf.gii"
+
+wb_command -surface-sphere-project-unproject  \
+	"$native_reg_sphere"  \
+	"$sphere_proj" "$sphere_unproj" \
+	"$reg_lr_sphere"
+
+#	STAGE 3: Pre-MSM spherical rotation
+
+stdprint "Performing spherical rotation into fs_LR_164k"
+affine_mat="$outdir/$hemicode.mat"
+wb_command -surface-affine-regression "$native_sphere" "$reg_lr_sphere" "$affine_mat" 
+
+echo "Extracting rotational components of affine transformation matrix and writing to $affine_mat..."
+rotation_script="$RTMSBIN/normalize_rotation.py"
+"$rotation_script" "$affine_mat" "$affine_mat"
+
+echo "Applying spherical rotation and setting radius to 100..."
+rot_sphere="$outdir/fs_$subject.$hemicode.sphere_rot.surf.gii"
+wb_command -surface-apply-affine "$native_sphere" "$affine_mat" "$rot_sphere"
+wb_command -surface-modify-sphere "$rot_sphere" 100 "$rot_spehre"
+
+#	STAGE 4: Set up sulcal depth map
+
+stdprint "Setting up sulcal depth map"
+native_sulc="$outdir/fs_$subject.$hemicode.sulc.native.shape.gii"
+mris_convert -c "$surfdir/$hemisphere.sulc" "$surfdir/$hemisphere.white" "$native_sulc"
+wb_command -metric-math 'a*(-1)' -var 'a' "$native_sulc" "$native_sulc"
+wb_command -set-structure "$native_sulc" "$structure"
+
+#	STAGE 5: Running MSMSulcStrain
+
+inp_sphere="$rot_sphere"
+inp_data="$native_sulc"
+ref_sphere="$atlasdir/fsaverage.${hemicode}_LR.spherical_std.164k_fs_LR.surf.gii"
+ref_data="$atlasdir/$hemicode.refsulc.164k_fs_LR.shape.gii"
+msm_sphere="$outdir/fs_$subject.$hemicode.sphere.reg_msm.surf.gii"
+areal_distortion="$outdir/fs_$subject.$hemicode.areal_distortion.shape.gii"
+
+#make a temporary directory for storing msm
+mkdir -p "$outdir/msm"
+
+stdprint "Performing MSM spherical deformation algorithm"
+"$RTMSBIN/msm" --inmesh="$inp_sphere" --indata="$inp_data" \
+		--refmesh="$ref_sphere" --refdata="$ref_data" \
+		--conf="$conf" --out="$outdir/msm/$hemicode." \
+		--verbose
+
+mv "$outdir/msm/$hemicode.sphere.reg.surf.gii" "$msm_sphere"
+wb_command -set-structure "$msm_sphere" "$structure"
+rm -rf "$outdir/msm/"
+
+stdprint "Computing areal distortion map of non-linear registration"
+wb_command -surface-distortion "$inp_sphere" "$msm_sphere" "$areal_distortion"
+
+#Finished
+stdprint "Successfully registered $subject data to 164k_fs_LR space"
+
+

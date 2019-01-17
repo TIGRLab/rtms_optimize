@@ -49,11 +49,11 @@ inp_dir=$(dirname "$inp_mesh")
 inp_name=$(basename "$inp_mesh")
 hemi_with_type="$inp_dir/${inp_name%.*}"
 
-
 #Default location of configuration file
 CONF=/projects/jjeyachandra/rtms_optimize/config/MSMSulcStrainFinalconf
 
 stdprint "Converting remeshed surface to Freesurfer..."
+
 #Convert mesh --> stl --> freesurfer surface
 meshfix "$inp_mesh" --no-clean --stl -o "$hemi_with_type.stl"
 
@@ -79,17 +79,33 @@ stdprint "Generating topological sphere..."
 p_hemisphere="$inp_dir"/$(basename "$hemi_with_type" | cut -d '.' -f1)
 
 #Don't smooth the white matter, could probably just copy with new name instead
+if [ ! -f "$p_hemisphere.smoothwm" ]; then
 mris_smooth -n 0 -nw "$hemi_with_type" "$p_hemisphere.smoothwm"
+else
+	echo "Found pre-existing $p_hemisphere.smoothwm"
+fi
 
 #Make inflated surface
+if [ ! -f "$p_hemisphere.inflated" ]; then
 mris_inflate "$p_hemisphere.smoothwm" "$p_hemisphere.inflated"
+else
+	echo "Found pre-existing $p_hemisphere.inflated"
+fi
 
 #Make .curv file
+if [ ! -f "$p_hemisphere.curv" ]; then
 mris_curvature -a "$curv_smoothing" -w "$p_hemisphere.white"
 cp "$p_hemisphere.white.H" "$p_hemisphere.curv"
+else
+	echo "Found pre-existing $p_hemisphere.curv"
+fi
 
 #Make registration sphere
+if [ ! -f "$p_hemisphere.sphere" ]; then
 mris_sphere "$p_hemisphere.inflated" "$p_hemisphere.sphere"
+else
+	echo "Found pre-existing $p_hemisphere.sphere"
+fi
 
 #Extract L/R
 base_hemisphere=$(basename "$p_hemisphere")
@@ -97,8 +113,11 @@ HEMI_SHORT=${base_hemisphere^^}
 HEMI_SHORT=${HEMI_SHORT:0:1}
 
 #Generate native mesh --> fsaverage registration
+if [ ! -f "$p_hemisphere.sphere.reg" ]; then
 mris_register "$p_hemisphere.sphere" "$FREESURFER_HOME/average/$base_hemisphere.average.curvature.filled.buckner40.tif" "$p_hemisphere.sphere.reg"
-
+else
+	echo "Found pre-existing $p_hemisphere.sphere.reg"
+fi
 stdprint "Finished generating FreeSurfer topological sphere"
 
 stdprint "Beginning construction of MSMSulc input files..."
@@ -108,8 +127,8 @@ declare -A struct_map
 struct_map=( ['L']="CORTEX_LEFT" ['R']="CORTEX_RIGHT")
 STRUCTURE=${struct_map[$HEMI_SHORT]}
 
-#Get mesh directory
-ATLAS_DIR=/projects/jjeyachandra/ciftify/ciftify/data/standard_mesh_atlases/
+#Get mesh directory - crash point
+ATLAS_DIR=/projects/jjeyachandra/rtms_optimize/resources/
 
 #Define the native space GIFTI name
 NATIVE_SPHERE="$p_hemisphere.sphere.$HEMI_SHORT.surf.gii"
@@ -126,13 +145,12 @@ wb_command -set-structure "$NATIVE_REG_SPHERE" "$STRUCTURE" -surface-type "SPHER
 
 #Get template registration spheres from connectome workbench and define output name
 stdprint "Performing registration onto FS_LR_164K"
-SPHERE_PROJ="$ATLAS_DIR/fs_$HEMI_SHORT/fsaverage.$HEMI_SHORT.sphere.164k_fs_$HEMI_SHORT.surf.gii"
-SPHERE_UNPROJ="$ATLAS_DIR/fs_$HEMI_SHORT/fs_$HEMI_SHORT-to-fs_LR_fsaverage.${HEMI_SHORT}_LR.spherical_std.164k_fs_$HEMI_SHORT.surf.gii"
+SPHERE_PROJ="$ATLAS_DIR/fsaverage.$HEMI_SHORT.sphere.164k_fs_$HEMI_SHORT.surf.gii"
+SPHERE_UNPROJ="$ATLAS_DIR/fs_$HEMI_SHORT-to-fs_LR_fsaverage.${HEMI_SHORT}_LR.spherical_std.164k_fs_$HEMI_SHORT.surf.gii"
 REG_LR_SPHERE="$inp_dir/sphere.reg.reg_LR.$HEMI_SHORT.native.surf.gii"
 
 #Make registration to fs_LR_164k. Basically a concatenation of matrix transforms w/1 resampling step
 wb_command -surface-sphere-project-unproject "$NATIVE_REG_SPHERE" "$SPHERE_PROJ" "$SPHERE_UNPROJ" "$REG_LR_SPHERE"
-
 
 stdprint "Performing spherical rotation into fs_LR_164k"
 #Compute affine transformation from native --> fs_LR_164k sphere
@@ -167,7 +185,7 @@ msm_sphere="$inp_dir/$HEMI_SHORT.sphere.reg_msm.surf.gii"
 stdprint "Performing MSM spherical deformation to match fs_LR_164k"
 "$RTMSBIN"/msm --inmesh="$inp_sphere"  --indata="$inp_data" \
 	--refmesh="$ref_sphere" --refdata="$ref_data" \
-	--conf=$CONF --out="$inp_dir/$HEMI_SHORT."
+	--conf=$CONF --out="$inp_dir/$HEMI_SHORT." --verbose
 mv "$inp_dir/$HEMI_SHORT.sphere.reg.surf.gii" "$msm_sphere"
 wb_command -set-structure "$msm_sphere" "$STRUCTURE"
 

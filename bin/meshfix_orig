@@ -1,0 +1,58 @@
+#!/bin/bash
+# Script to regularize the meshing of freesurfer surface created by -tessellate of recon-all
+# Will copy to new folder called $SUBJECTS_DIR/$SUBJ/custom and process then output
+# Then regenerate curvature file using re-meshed surface 
+
+
+#Set up pathing, use custom folder for now (testing!)
+SUBJ=$1
+SUFFIX=$2 #Suffix the part after ?h.
+NUM_VERTICES=$3
+OUT_SUFFIX=$4
+SURFDIR=/projects/jjeyachandra/rtms_optimize/data/simnibs_output/$SUBJ/surf
+MESHDIR=/projects/jjeyachandra/rtms_optimize/data/simnibs_output/$SUBJ/custom/
+
+#Only if custom output name is required do it, otherwise keep to normal
+if ! [ -z $OUT_SUFFIX ]; then
+	OUT_SUFFIX=$SUFFIX
+fi
+
+#MAKE MESHDIR
+mkdir -p $MESHDIR
+
+for i in {r,l}h; do
+
+	cp "$SURFDIR/$i.$SUFFIX"  "$MESHDIR/$i.$SUFFIX"
+		
+	mris_convert "$MESHDIR/$i.$SUFFIX" "$MESHDIR/$i.stl"
+	meshfix "$MESHDIR/$i.stl" -a 2.0 --remove-handles -q -o "$MESHDIR/$i.fixed"
+	meshfix "$MESHDIR/$i.fixed.off" -a 2.0 --vertices "$NUM_VERTICES" -q -o "$MESHDIR/$i.fixed"
+	#-u 5 removed
+
+	#Continue iteratively fixing
+	#-u 1 removed
+	meshfix "$MESHDIR/$i.fixed.off" -a 2.0 -q -o "$MESHDIR/$i.fixed"
+	meshfix "$MESHDIR/$i.fixed.off" -a 2.0 -q -o "$MESHDIR/$i.fixed"
+
+	#Convert to stl
+	meshfix "$MESHDIR/$i.fixed.off" --fsmesh --no-clean -o "$MESHDIR/$i.fsmesh"
+	rm "$MESHDIR/$i.fixed.off" "$MESHDIR/$i.stl"
+
+done
+
+#Convert in parallel, we use .pre. to keep original copy in case things go wrong
+for i in {r,l}h; do
+
+	mris_convert "$MESHDIR/$i.fsmesh" "$i.pre.$SUFFIX" 
+	mris_copy_header "$MESHDIR/$i.pre.$SUFFIX" "$SURFDIR/$i.$SUFFIX" "$SURFDIR/$i.$SUFFIX"
+	rm "$MESHDIR/$i.pre.$SUFFIX" "$MESHDIR/$i.fsmesh"
+
+done
+
+
+
+
+
+
+
+
