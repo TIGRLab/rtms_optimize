@@ -1,0 +1,84 @@
+#!/bin/bash
+
+#Arguments
+#	subject			bids subject name in SUBJECTS_DIR
+#	hemi			Hemisphere to work on (lh/rh)
+#	outdir			output folder to store cortical ribbon projected image
+
+#Description
+#Convenience script to convert freesurfer surfaces to connectome workbench format
+#Also generates a midthickness file
+
+#	House-cleaning functions
+
+close(){
+	STATUS=$?
+	if [ "$STATUS" == 0 ]; then
+		echo "simfs_to_gifti finished, Exiting..."
+	else
+		echo "simfs_to_gifti failed!"
+		echo "Exiting!"
+		exit 1
+	fi
+
+}
+
+stdprint(){
+	echo "#######################"
+	echo "$1"
+	echo "#######################"
+}
+
+checkvar(){
+
+	if  [ -z $1 ]; then
+
+		echo "$2 doesn't exist!"
+		exit 1
+
+	fi
+
+}
+
+trap close EXIT
+
+#	STAGE 0: Check inputs
+
+subject=$1
+hemi=$2
+outdir=$3
+
+checkvar "$subject"
+checkvar "$hemi"
+checkvar "$outdir"
+checkvar "$RTMSBIN"
+checkvar "$SUBJECTS_DIR"
+
+#Set up standard directories
+atlasdir=/projects/jjeyachandra/rtms_optimize/resources
+fsdir="$SUBJECTS_DIR/fs_$subject"
+
+#	STAGE 1: Convert to GIFTI
+
+declare -A struct_map
+struct_map=( ['L']='CORTEX_LEFT' ['R']='CORTEX_RIGHT')
+hemicode=${hemi:0:1}
+hemicode=${hemicode^^}
+structure=${struct_map[$hemicode]}
+
+for surf in "white" "pial"; do
+
+	surf_file="fs_$subject.$hemicode.$surf.surf.gii"
+
+	echo "Converting $hemi.$surf to GIFTI file; $surf_file..." 
+	mris_convert "$fsdir/surf/$hemi.$surf" "$outdir/$surf_file"
+	wb_command -set-structure "$outdir/$surf_file" "$structure"
+
+done
+
+echo "Computing midthickness"
+wb_command -surface-average -surf "$outdir/fs_$subject.$hemicode.$surf.surf.gii" \
+	-surf "$outdir/fs_$subject.$hemicode.$surf.surf.gii" \
+	"$outdir/fs_$subject.$hemicode.midthickness.surf.gii"
+
+echo "Done!"

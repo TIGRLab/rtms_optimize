@@ -1,0 +1,74 @@
+#!/bin/bash
+
+#Arguments
+#	subject			Subject name
+#	sphere			Input sphere
+#	hemi			Hemisphere to work on (L/R)
+#	parcel			Parcellation file
+#	outdir			output folder to store cortical ribbon projected image
+
+#Description
+#Convenience script to convert freesurfer surfaces to connectome workbench format
+#Also generates a midthickness file
+
+#	House-cleaning functions
+
+close(){
+	STATUS=$?
+	if [ "$STATUS" == 0 ]; then
+		echo "simfs_to_gifti finished, Exiting..."
+	else
+		echo "simfs_to_gifti failed!"
+		echo "Exiting!"
+		exit 1
+	fi
+
+}
+
+stdprint(){
+	echo "#######################"
+	echo "$1"
+	echo "#######################"
+}
+
+checkvar(){
+
+	if  [ -z $1 ]; then
+
+		echo "$2 doesn't exist!"
+		exit 1
+
+	fi
+
+}
+
+trap close EXIT
+
+#	STAGE 0: Check inputs
+subject=$1
+sphere=$2
+hemi=$3
+parcel=$4
+outdir=$5
+
+checkvar "$subject"
+checkvar "$sphere"
+checkvar "$hemi"
+checkvar "$parcel"
+checkvar "$outdir"
+checkvar "$SUBJECTS_DIR"
+checkvar "$RTMSBIN"
+
+atlasdir=/projects/jjeyachandra/rtms_optimize/resources
+hemi=${hemi^^}
+
+declare -A struct_map
+struct_map=( ['L']='CORTEX_LEFT' ['R']='CORTEX_RIGHT')
+structure=${struct_map[$hemi]}
+
+#	STAGE 1: Resample parcellation file
+sphere_32k="$atlasdir/$hemi.sphere.32k_fs_LR.surf.gii"
+resampled="$outdir/fs_$subject.$hemi.mshbm_parcels.label.gii"
+
+wb_command -label-resample "$parcel" "$sphere_32k" "$sphere" BARYCENTRIC "$resampled"
+wb_command -set-structure "$resampled" "$structure"

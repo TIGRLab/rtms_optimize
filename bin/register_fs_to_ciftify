@@ -143,6 +143,7 @@ stdprint "Performing MSM spherical deformation algorithm"
 		--conf="$conf" --out="$outdir/msm/$hemicode." \
 		--verbose
 
+exit
 mv "$outdir/msm/$hemicode.sphere.reg.surf.gii" "$msm_sphere"
 wb_command -set-structure "$msm_sphere" "$structure"
 rm -rf "$outdir/msm/"
