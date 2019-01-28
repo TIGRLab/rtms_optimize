@@ -15,7 +15,13 @@ Establish a correspondence between the individualized functional network parcell
 TO-DO: Update with new post-Freesurfer scripts
 
 ## Ribbon-Constrained tetrahedral projection algorithm
-Analagous to HCP surface projection algorithm except uses Monte Carlo sampling with uniform sampling within tetrahedral volumes. Uniform sampling is achieved through the parallelepiped folding algorithm: [Generating Random Points in a Tetrahedron](http://vcg.isti.cnr.it/publications/papers/rndtetra_a.pdf) by C.Rocchini and P. Cignoni. 
+Analagous to HCP surface projection algorithm. Use Monte Carlo sampling with uniform sampling within tetrahedral volumes. Uniform sampling is achieved through the parallelepiped folding algorithm: [Generating Random Points in a Tetrahedron](http://vcg.isti.cnr.it/publications/papers/rndtetra_a.pdf) by C.Rocchini and P. Cignoni. 
+
+#### Implementation Steps:
+1. Optimize loop run-time using Numba static typing
+2. Use variance convergence criterion of Monte Carlo sampling so number of samples is chosen dynamically
+3. Parallelize across loops (using no-gil of Numbda???)
+4. Wrap in a Python script for easier deployment
 
 ## Bayesian Optimization of an rTMS Field Distribution-derived Objective Function
 
