@@ -20,7 +20,7 @@ Analagous to HCP surface projection algorithm. Use Monte Carlo sampling with uni
 #### Implementation Steps:
 1. Optimize loop run-time using Numba static typing
 2. Use variance convergence criterion of Monte Carlo sampling so number of samples is chosen dynamically
-3. Parallelize across loops (using no-gil of Numbda???)
+3. Parallelize across loops (using no-gil of Numba???)
 4. Wrap in a Python script for easier deployment
 
 ## Bayesian Optimization of an rTMS Field Distribution-derived Objective Function
