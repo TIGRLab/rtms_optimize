@@ -1,0 +1,121 @@
+#!/bin/bash
+
+#ARGUMENTS:
+#	subject		BIDS subject name
+#	surfs		Path to subject's surface file outputs (temporarily disabled)
+#	t1		T1 image
+#	mni_func	MNI-space functional image
+#	output		Full path to output
+
+#DESCRIPTION:
+# Use ribbon constrained volume --> surface projection. Maps volume data into surface space
+
+
+# House-cleaning functions
+
+close(){
+	STATUS=$?
+	if [ "$STATUS" == 0 ]; then
+		echo "surface_projection finished, Exiting..."
+	else
+		echo "surface_projection failed!"
+		echo "Exiting!"
+		exit 1
+	fi
+
+}
+
+stdprint(){
+	echo "#######################"
+	echo "$1"
+	echo "#######################"
+}
+
+checkvar(){
+
+	if  [ -z "$1" ]; then
+
+		echo "$2 doesn't exist!"
+		exit 1
+
+	fi
+
+}
+
+trap close EXIT
+
+#	STAGE 0: Check inputs
+subject=$1
+#surfs=$2
+t1=$2
+mni_func=$3
+output=$4
+
+checkvar "$subject" subject
+checkvar "$t1" t1
+checkvar "$mni_func" mni_func
+checkvar "$output" warp
+
+#	STAGE 1: Create ribbon mask
+#Make temporary directory
+tmpdir=$(mktemp -d "/tmp/rib.XXXXX")
+
+##Run for both hemispheres
+#for h in "L" "R"; do
+#
+#	#Get input surfaces and output distance volumes
+#	white_src="$surfs/fs_$subject.$h.white.surf.gii"
+#	pial_src="$surfs/fs_$subject.$h.pial.surf.gii"
+#	white_dist="$tmpdir/$h.white.native.nii.gz"
+#	pial_dist="$tmpdir/$h.pial.native.nii.gz"
+#	rib_out="$tmpdir/$h.ribbon.native.nii.gz"
+#
+#	#Compute distance volumes
+#	wb_command -create-signed-distance-volume "$white_src" "$t1" "$white_dist"
+#	wb_command -create-signed-distance-volume "$pial_src" "$t1" "$pial_dist"
+#
+#	#Threshold at binarize
+#	fslmaths "$white_dist" -thr 0 -bin -mul 255 -bin "$white_dist"
+#	fslmaths "$pial_dist" -thr 0 -bin -mul 255 -bin "$pial_dist"
+#	
+#	#Combine pial and white
+#	fslmaths "$pial_dist" -mas "$white_dist" -mul 255 "$rib_out"
+#	fslmaths "$rib_out" -bin -mul 1 "$rib_out"
+#	
+#done
+#
+##Combine hemispheres
+#fslmaths "$tmpdir/L.ribbon.native.nii.gz" -add "$tmpdir/R.ribbon.native.nii.gz" "$tmpdir/ribbon.native.nii.gz"
+
+#Generate Nonlinear transformation from T1 --> MNI via linear affine --> non-linear affine transformation
+#Convert brain-mask into FSL NIFTI format
+cp "$SUBJECTS_DIR/fs_$subject/mri/brain.finalsurfs.mgz" "$tmpdir/skullstrip_brain.mgz"
+mri_convert "$tmpdir/skullstrip_brain.mgz" "$tmpdir/skullstrip_brain.nii.gz"
+
+#Create mask, fill, loosen constraints then apply
+stdprint "Creating masks"
+fslmaths "$SUBJECTS_DIR/m2m_$subject/gm.nii.gz" -add "$SUBJECTS_DIR/m2m_$subject/cerebellum.nii.gz" -bin \
+	"$tmpdir/brainmask.nii.gz"
+fslmaths "$tmpdir/brainmask.nii.gz" -dilM -dilM -fillh -ero "$tmpdir/brainmask.nii.gz"
+fslmaths "$SUBJECTS_DIR/m2m_$subject/T1fs_nu_conform.nii.gz" -mul "$tmpdir/brainmask.nii.gz" \
+	"$tmpdir/stripped_brain.nii.gz"
+
+#Find MNI transformation
+stdprint "Computing nonlinear transformation to MNI"
+flirt -dof 6 -in "$tmpdir/stripped_brain.nii.gz" -ref "$FSLDIR/data/standard/MNI152_T1_2mm_brain.nii.gz" \
+	-omat "$tmpdir/lin_T1fs2MNI.mat"
+fnirt --in="$tmpdir/stripped_brain.nii.gz" --aff="$tmpdir/lin_T1fs2MNI.mat" --cout="$tmpdir/nonlin_T1fs2MNI" \
+	--config="T1_2_MNI152_2mm"
+
+#Invert warp-field inv(T1fs --> MNI) = (MNI --> T1fs)
+stdprint "Inverting and applying warp field"
+invwarp -w "$tmpdir/nonlin_T1fs2MNI" -o "$tmpdir/nonlin_MNI2T1fs" -r "$tmpdir/stripped_brain.nii.gz"
+applywarp -i "$mni_func" -o "$tmpdir/func_space-T1fs.nii.gz" -r "$tmpdir/stripped_brain.nii.gz" \
+	-w "$tmpdir/nonlin_MNI2T1fs.nii.gz"
+
+#For now go straight to tetrahedral mapping and save warp fields
+stdprint "Copying warpfield and final file"
+cp "$tmpdir/func_space-T1fs.nii.gz" "$output/${subject}_space-T1fs_zmap.nii.gz"
+cp "$tmpdir/nonlin_MNI2T1fs.nii.gz" "$output/${subject}_nonlin_MNI2T1fs.nii.gz"
+cp "$tmpdir/nonlin_T1fs2MNI.nii.gz" "$output/${subject}_nonlin_T1fs2MNI.nii.gz"
+close
