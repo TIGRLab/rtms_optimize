@@ -79,7 +79,7 @@ structure=${struct_map[$hemicode]}
 #Output variables
 native_sphere="$outdir/fs_$subject.$hemicode.sphere.surf.gii"
 native_reg_sphere="$outdir/fs_$subject.$hemicode.sphere.reg.surf.gii"
-if ! [ -z "$native_reg_sphere" ] || ! [ -z "$native_sphere" ]; then
+if ! [ -f "$native_reg_sphere" ] || ! [ -f "$native_sphere" ]; then
 
 	mris_convert "$surfdir/$hemisphere.sphere" "$native_sphere"
 	mris_convert "$surfdir/$hemisphere.sphere.reg" "$native_reg_sphere"
@@ -96,7 +96,7 @@ stdprint "Performing registration to fs_LR_164k"
 sphere_proj="$atlasdir/fsaverage.$hemicode.sphere.164k_fs_$hemicode.surf.gii"
 sphere_unproj="$atlasdir/fs_$hemicode-to-fs_LR_fsaverage.${hemicode}_LR.spherical_std.164k_fs_$hemicode.surf.gii"
 reg_lr_sphere="$outdir/fs_$subject.$hemicode.sphere.reg.reg_LR.native.surf.gii"
-if ! [ -z "$reg_lr_sphere" ]; then
+if ! [ -f "$reg_lr_sphere" ]; then
 
 
 	wb_command -surface-sphere-project-unproject  \
@@ -112,7 +112,7 @@ stdprint "Performing spherical rotation into fs_LR_164k"
 
 affine_mat="$outdir/$hemicode.mat"
 rot_sphere="$outdir/fs_$subject.$hemicode.sphere_rot.surf.gii"
-if ! [ -z "$rot_sphere" ]; then
+if ! [ -f "$rot_sphere" ]; then
 
 	wb_command -surface-affine-regression "$native_sphere" "$reg_lr_sphere" "$affine_mat" 
 
@@ -133,7 +133,7 @@ stdprint "Setting up sulcal depth map"
 
 native_sulc="$outdir/fs_$subject.$hemicode.sulc.native.shape.gii"
 
-if ! [ -z "$native_sulc" ]; then
+if ! [ -f "$native_sulc" ]; then
 
 	mris_convert -c "$surfdir/$hemisphere.sulc" "$surfdir/$hemisphere.white" "$native_sulc"
 	wb_command -metric-math 'a*(-1)' -var 'a' "$native_sulc" "$native_sulc"
@@ -153,7 +153,7 @@ msm_sphere="$outdir/fs_$subject.$hemicode.sphere.reg_msm.surf.gii"
 areal_distortion="$outdir/fs_$subject.$hemicode.areal_distortion.shape.gii"
 
 #make a temporary directory for storing msm
-if ! [ -z "$msm_sphere" ]; then
+if ! [ -f "$msm_sphere" ]; then
 
 	mkdir -p "$outdir/msm"
 
@@ -173,7 +173,7 @@ fi
 #	STAGE 6: Areal distortion map
 stdprint "Computing areal distortion map of non-linear registration"
 
-if ! [ -z "$areal_distortion" ]; then
+if ! [ -f "$areal_distortion" ]; then
 
 	wb_command -surface-distortion "$inp_sphere" "$msm_sphere" "$areal_distortion"
 else
