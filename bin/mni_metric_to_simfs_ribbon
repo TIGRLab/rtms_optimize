@@ -62,49 +62,69 @@ checkvar "$ciftify" ciftify
 checkvar "$outdir" outdir
 checkvar "$SUBJECTS_DIR" SUBJECTS_DIR
 
+#Set some convenience paths
+atlasspacenative="$ciftify/MNINonLinear/Native/"
+fs164k="$ciftify/MNINonLinear/"
+surfs_dir="$outdir/$subject/surfs"
+
 mkdir -p "$outdir/$subject"
 
 #	STAGE 1: Convert Freesurfer outputs into GIFTI format
 mkdir -p "$outdir/$subject/surfs"
-for h in 'L' 'R'; do
-	"$RTMSBIN/simfs_to_gifti" "$subject" "$h" "$outdir/$subject/surfs"
+for h in 'lh' 'rh'; do
+	"$RTMSBIN/simfs_to_gifti" "$subject" "$h" "$surfs_dir"
 done
 
 #	STAGE 2: Register simnibs/freesurfer surfaces to ciftify 
 for h in 'lh' 'rh'; do
-	"$RTMSBIN/register_fs_to_ciftify" "$subject" "$h" "$outdir/$subject/surfs"
+	"$RTMSBIN/register_fs_to_ciftify" "$subject" "$h" "$surfs_dir"
 done
 
-#	STAGE 3: Map volume metric to surface, resample to simfs, then ribbon project
+#	STAGE 3: Map metric to AtlasSpaceNative, resample to 164k, resample to simfs, ribbon project to volume
 mkdir -p "$outdir/$subject/func"
+
 for h in 'L' 'R'; do
 
-	#Map metric --> surface
-	metric_surface="$outdir/$subject/func/$subject.$h.zmap.shape.gii"
+	#Map metric --> AtlasSpaceNative surface
+	metric_surface="$outdir/$subject/func/$subject.$h.zmap.native.shape.gii"
 	wb_command -volume-to-surface-mapping "$metric" \
-	     	"$ciftify/MNINonLinear/${subject}.$h.midthickness.164k_fs_LR.surf.gii" \
+		"$atlasspacenative/${subject}.$h.midthickness.native.surf.gii" \
 		"$metric_surface" \
 		-ribbon-constrained \
-		"$ciftify/MNINonLinear/${subject}.$h.white.164k_fs_LR.surf.gii" \
-		"$ciftify/MNINonLinear/${subject}.$h.pial.164k_fs_LR.surf.gii"
+		"$atlasspacenative/${subject}.$h.white.native.surf.gii" \
+		"$atlasspacenative/${subject}.$h.pial.native.surf.gii"
 
-	#Resample to simfs
-	resampled_metric="$outdir/$subject/func/$subject.$h.zmap_simfs.shape.gii"
+	#AtlasSpaceNative --> fs_LR_164k resample
+	resampled_metric_164k="$outdir/$subject/func/$subject.$h.zmap.fs_LR_164k.shape.gii"
 	wb_command -metric-resample "$metric_surface" \
-		"$ciftify/MNINonLinear/${subject}.$h.sphere.164k_fs_LR.surf.gii" \
-		"$outdir/$subject/surfs/fs_${subject}.$h.sphere.reg_msm.surf.gii" \
+		"$atlasspacenative/${subject}.$h.sphere.MSMSulc.native.surf.gii" \
+		"$fs164k/${subject}.$h.sphere.164k_fs_LR.surf.gii" \
 		"BARYCENTRIC" \
-		"$resampled_metric"
+		"$resampled_metric_164k"
+
+	#fs_LR_164k --> simfs resample
+	resampled_metric_simfs="$outdir/$subject/func/$subject.$h.zmap.simfs.shape.gii"
+	wb_command -metric-resample "$resampled_metric_simfs" \
+		"$fs164k/${subject}.$h.sphere.164k_fs_LR.surf.gii" \
+		"$surfs_dir/fs_${subject}.$h.sphere.reg_msm.surf.gii" \
+		"BARYCENTRIC" \
+		"$resampled_metric_simfs"
+
+	#Theoretically here you'd insert the FC python script computation
 
 	#Use ribbon based projection
-	simfs_ribbon="$outdir/$subject/func/$subject.$h.zmap_simfs.nii.gz"
+	simfs_ribbon="$outdir/$subject/func/$subject.$h.zmap.simfs.nii.gz"
 	wb_command -metric-to-volume-mapping "$resampled_metric" \
-		"$outdir/$subject/surfs/fs_${subject}.$h.midthickness.surf.gii" \
+		"$surfs_dir/fs_${subject}.$h.midthickness.surf.gii" \
 		"$SUBJECTS_DIR/m2m_${subject}/T1fs_nu_conform.nii.gz" \
-		"$simfs_ribbon" \
 		-ribbon-constrained \
-		"$outdir/$subject/surfs/fs_${subject}.$h.white.surf.gii" \
-		"$outdir/$subject/surfs/fs_${subject}.$h.pial.surf.gii"
+		"$surfs_dir/fs_${subject}.$h.white.surf.gii" \
+		"$surfs_dir/fs_${subject}.$h.pial.surf.gii" \
+		"$simfs_ribbon" 
 		
 done
 
+#Sum up the results
+rib_L="$outdir/$subject/func/$subject.L.zmap.simfs.nii.gz"
+rib_R="$outdir/$subject/func/$subject.R.zmap.simfs.nii.gz"
+fslmaths "$rib_L" -add "$rib_R" "$outdir/$subject/func/$subject.zmap.simfs.nii.gz"
