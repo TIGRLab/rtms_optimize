@@ -86,6 +86,7 @@ mkdir -p "$outdir/$subject/func"
 for h in 'L' 'R'; do
 
 	#Map metric --> AtlasSpaceNative surface
+	stdprint "Mapping Metric volume --> AtlasSpaceNative"
 	metric_surface="$outdir/$subject/func/$subject.$h.zmap.native.shape.gii"
 	wb_command -volume-to-surface-mapping "$metric" \
 		"$atlasspacenative/${subject}.$h.midthickness.native.surf.gii" \
@@ -95,6 +96,7 @@ for h in 'L' 'R'; do
 		"$atlasspacenative/${subject}.$h.pial.native.surf.gii"
 
 	#AtlasSpaceNative --> fs_LR_164k resample
+	stdprint "Mapping AtlasSpaceNative --> fs_LR_164k"
 	resampled_metric_164k="$outdir/$subject/func/$subject.$h.zmap.fs_LR_164k.shape.gii"
 	wb_command -metric-resample "$metric_surface" \
 		"$atlasspacenative/${subject}.$h.sphere.MSMSulc.native.surf.gii" \
@@ -103,8 +105,9 @@ for h in 'L' 'R'; do
 		"$resampled_metric_164k"
 
 	#fs_LR_164k --> simfs resample
+	stdprint "Mapping fs_LR_164k --> SimFS"
 	resampled_metric_simfs="$outdir/$subject/func/$subject.$h.zmap.simfs.shape.gii"
-	wb_command -metric-resample "$resampled_metric_simfs" \
+	wb_command -metric-resample "$resampled_metric_164k" \
 		"$fs164k/${subject}.$h.sphere.164k_fs_LR.surf.gii" \
 		"$surfs_dir/fs_${subject}.$h.sphere.reg_msm.surf.gii" \
 		"BARYCENTRIC" \
@@ -112,9 +115,10 @@ for h in 'L' 'R'; do
 
 	#Theoretically here you'd insert the FC python script computation
 
-	#Use ribbon based projection
+	#Use ribbon based projection (maybe test fnirt to T1w, then surface?)
+	stdprint "Projecting SimFS --> Volume"
 	simfs_ribbon="$outdir/$subject/func/$subject.$h.zmap.simfs.nii.gz"
-	wb_command -metric-to-volume-mapping "$resampled_metric" \
+	wb_command -metric-to-volume-mapping "$resampled_metric_simfs" \
 		"$surfs_dir/fs_${subject}.$h.midthickness.surf.gii" \
 		"$SUBJECTS_DIR/m2m_${subject}/T1fs_nu_conform.nii.gz" \
 		-ribbon-constrained \

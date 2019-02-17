@@ -1,0 +1,81 @@
+#!/bin/bash
+
+#ARGUMENTS:
+#	subject			BIDS subject name
+#	label			CIFTI Label file
+#	surfdir			Directory containing GIFTI surfaces
+#	outdir			Output directory
+
+#DESCRIPTION:
+#Convenient wrapper for gifti_ribbon projection 
+
+#	House-cleaning functions
+
+close(){
+	STATUS=$?
+	if [ "$STATUS" == 0 ]; then
+		echo "ribbon_projection finished, Exiting..."
+	else
+		echo "ribbon_projection failed!"
+		echo "Exiting!"
+		exit 1
+	fi
+
+}
+
+stdprint(){
+	echo "#######################"
+	echo "$1"
+	echo "#######################"
+}
+
+checkvar(){
+
+	if  [ -z "$1" ]; then
+
+		echo "$2 doesn't exist!"
+		exit 1
+
+	fi
+
+}
+
+trap close EXIT
+
+#	STAGE 0: Check inputs
+subject=$1
+surfdir=$2
+label=$3
+outdir=$4
+
+checkvar "$subject" subject
+checkvar "$label" label
+checkvar "$surfdir" surfdir
+checkvar "$outdir" outdir
+checkvar "$SUBJECTS_DIR" SUBJECTS_DIR
+
+volume="$SUBJECTS_DIR/m2m_$subject/T1fs_nu_conform.nii.gz"
+if ! [ -e "$volume" ]; then
+	echo "Could not find $volume!"
+	exit 1
+fi
+
+#Define outfile
+fname=$(basename "$label" | cut -d '.' -f1)
+
+declare -A struct_map
+struct_map['L']='CORTEX_LEFT'
+struct_map['R']='CORTEX_RIGHT'
+tmpdir=$(mktemp -d /tmp/tmp.XXXXX)
+for h in 'L' 'R'; do
+
+	struct="${struct_map[$h]}"
+	outfile="$outdir/$subject.$h.${fname}_ribbon.nii.gz"
+
+	#Split CIFTI --> GIFTI
+	wb_command -cifti-separate "$label" COLUMN -label "$struct" "$tmpdir/$h.label.gii"
+	"$RTMSBIN/gifti_ribbon_projection" "$subject" "$h" "$surfdir" "$tmpdir/$h.label.gii" "$outfile"
+
+done
+
+rm -rf "$tmpdir"

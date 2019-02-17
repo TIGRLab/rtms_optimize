@@ -1,0 +1,54 @@
+#!/bin/bash
+
+#Based on code by Erin Dickie
+
+
+#Vertex Area ratio threshold (% area coverage relative to greatest to cut-off at)
+va_ratio=0.1
+
+#Load in parcellation, left, and right surfaces, then map nums go into array
+left_label=$1
+right_label=$2 
+left_surf=$3 
+right_surf=$4
+network_key=$5
+output_dir=$6
+
+
+tmpdir=$(mktemp -d /tmp/tmp.XXXXX)
+echo "$tmpdir"
+
+#Temporarily join dlabels
+dlabel="$tmpdir/lr_merged.dlabel.nii"
+wb_command -cifti-create-label \
+	-left-label "$left_label" \
+	-right-label "$right_label" \
+	"$dlabel"
+
+#Convert to ROI
+wb_command -cifti-label-to-roi \
+	-key "$network_key" \
+	"$dlabel" \
+	"$tmpdir/key_map_$network_key.dscalar.nii"
+
+#Run spatial clustering
+wb_command -cifti-find-clusters \
+	"$tmpdir/key_map_$network_key.dscalar.nii" \
+	0.5 5 0.5 5 COLUMN \
+	"$tmpdir/clustered_$network_key.dscalar.nii" \
+	-left-surface "$left_surf" \
+	-right-surface "$right_surf" \
+	-size-ratio "$va_ratio" "$va_ratio"
+
+#Reduce to a single scalar map
+wb_command -cifti-reduce \
+	"$tmpdir/clustered_$network_key.dscalar.nii" \
+	MAX \
+	"$tmpdir/MAX_$network_key.dscalar.nii"
+
+#Convert dscalar to dlabel with random colors
+wb_command -cifti-label-import \
+	"$tmpdir/MAX_$network_key.dscalar.nii" '' "$tmpdir/MAX_$network_key.dlabel.nii"
+
+mv "$tmpdir/MAX_$network_key.dlabel.nii" "$output_dir/network_$network_key.dlabel.nii"
+#rm -rf "$tmpdir"

@@ -183,4 +183,3 @@ fi
 
 #Finished
 stdprint "Successfully registered $subject data to 164k_fs_LR space"
-close
