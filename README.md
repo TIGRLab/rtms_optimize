@@ -36,4 +36,8 @@ Toolbox to be used: [fmfn/BayesianOptimization](https://github.com/fmfn/Bayesian
 
 [Asynchronous Parallel Bayesian Optimisation via Thompson Sampling](https://arxiv.org/abs/1705.09236)
 
+## Debug Notes
 
+1. When installing Cornell-MOE, update setup.py as per instructions in optimization/README.md.
+2. When constructing FEM, use Gmsh4 (MSH4), then convert into MSH2. The gmsh-sdk will be able to handle both. If you use SimNIBS' Gmsh3 to construct the FEM, the sdk will not be able to read the MSH3 file correctly.
+3. Cornell-MOE works with numpy-1.16
