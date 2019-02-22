@@ -49,7 +49,7 @@ trap close EXIT
 
 subject=$1
 hemisphere=$2
-outdir=$3
+outdir=$3/$1/surfs
 
 conf=/projects/jjeyachandra/rtms_optimize/config/MSMSulcStrainFinalconf
 atlasdir=/projects/jjeyachandra/rtms_optimize/resources/
