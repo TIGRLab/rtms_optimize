@@ -135,7 +135,7 @@ def interpolate_angle(u,v,t,l=90.0):
     '''
     
     theta = (t/l)*(np.pi/2)
-    p = np.r_[u*np.cos(theta) + v*np.cos(theta)]
+    p = np.r_[u*np.cos(theta) + v*np.sin(theta), 0]
     return p
 
 
@@ -202,14 +202,14 @@ def map_rot_2_surf(x,y,t,C):
     '''
     
     v1, v2, n = compute_principal_dir(x,y,C)
-    p = interpolate_angle(v1,v2,t)
+    p = interpolate_angle(v1[:2],v2[:2],t)
     
     z = np.array([0,0,1],dtype=np.float64)
     R = rotate_vec2vec(z,n)
     pp = np.matmul(R,p)
     
     
-    return pp, n
+    return p, n
 
 
 # In[ ]:
