@@ -1,14 +1,14 @@
-'''
-Minimal test suite for validating tetrahedral projection algorithm
-
-Tests implemented:
-
-    1. Fully embedded tetrahedrons
-    2. Bordering sample rejection and resampling
-    3. Direction-specific dual membership
-    4. Single voxel exclusion test (2x2 voxels, planar, 1 voxel excluded)
-    5. Comparison to analytical solution for simple 2 voxel test
-'''
+#!/usr/bin/env python
+## Minimal test suite for validating tetrahedral projection algorithm
+## 
+## Tests implemented:
+## 
+##     1. Fully embedded tetrahedrons
+##     2. Bordering sample rejection and resampling
+##     3. Direction-specific dual membership
+##     4. Single voxel exclusion test (2x2 voxels, planar, 1 voxel excluded)
+##     5. Comparison to analytical solution for simple 2 voxel test
+## 
 
 import numpy as np
 from fieldopt import tetrapro
@@ -27,7 +27,7 @@ def gen_fully_embedded_tet(n,shape):
     tetrahedral vertices in voxel i,j,k
     '''
 
-    node_ids = np.ones((n,4),dtype=np.int).cumsum().reshape((n,4))
+    node_ids = np.ones((n,4),dtype=np.int).cumsum().reshape((n,4)) - 1
     coord_array = np.zeros((n*4,3))
     for i in np.arange(0,n):
 
@@ -52,8 +52,7 @@ def gen_fully_embedded_tet(n,shape):
         
     return node_ids, coord_array.flatten()
 
-#Test 1
-def test_1(N=10):
+def test_1(N=10,t=5):
     '''
     Fully embedded tetrahedron test
     '''
@@ -62,10 +61,11 @@ def test_1(N=10):
     data_grid = np.ones((N**3),dtype=np.int64).cumsum()
     data_grid = data_grid.reshape((N,N,N))
     data_grid = np.swapaxes(data_grid,0,2)
-    node_list, coord_array = gen_fully_embedded_tet(5, data_grid.shape)
 
-    import pdb; pdb.set_trace()
-    estimates = tetrapro.tetrahedral_projection(node_list,coord_array,affine)
+    node_list, coord_array = gen_fully_embedded_tet(t, data_grid.shape)
+    estimates = tetrapro.tetrahedral_projection(node_list,coord_array,data_grid,affine)
+    total_embedding_score = np.max(estimates,axis=0).sum()
+    assert int(total_embedding_score) == t
 
 def main():
     test_1()
