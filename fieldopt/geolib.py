@@ -3,9 +3,6 @@
 
 # Library of useful geometry functions
 
-# In[ ]:
-
-
 import numpy as np
 from scipy.linalg import lstsq
 import gmsh
