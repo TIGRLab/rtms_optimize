@@ -15,6 +15,8 @@ import os
 import numpy as np
 from fieldopt import tetrapro
 
+import mock
+
 def gen_fully_embedded_tet(n,shape):
     '''
     Generate <n> Class 1 (fully embedded) tetrahedrons within a data grid of shape <shape> 
@@ -54,7 +56,6 @@ def gen_fully_embedded_tet(n,shape):
         
     return node_ids, coord_array.flatten()
 
-
 def test_fully_embedded_tets_for_projection():
     '''
     Fully embedded tetrahedron test, full algorithm testing
@@ -71,3 +72,28 @@ def test_fully_embedded_tets_for_projection():
     estimates = tetrapro.tetrahedral_projection(node_list,coord_array,data_grid,affine)
     total_embedding_score = np.max(estimates,axis=0).sum()
     assert int(total_embedding_score) == t
+
+
+def test_border_cases_get_rejected():
+
+    #Test along each dimension
+    test_lowx = np.array([0,0.25,0.231])
+    test_highx = np.array([1,0.13,0.003])
+
+    test_lowy = np.array([0.23,0,0.1231])
+    test_highy = np.array([0.89,1,0.001])
+
+    test_lowz = np.array([0.101241, 0.231, 0])
+    test_highz = np.array([0.789, 0.341, 1])
+
+    vox = np.array([0,0,0])
+
+    #Run test batch
+    assert tetrapro.point_in_vox(test_lowx, vox)
+    assert tetrapro.point_in_vox(test_highx, vox)
+
+    assert tetrapro.point_in_vox(test_lowy, vox)
+    assert tetrapro.point_in_vox(test_lowy, vox)
+
+    assert tetrapro.point_in_vox(test_highz, vox)
+    assert tetrapro.point_in_vox(test_highz, vox)
