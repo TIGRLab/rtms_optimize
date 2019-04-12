@@ -5,7 +5,7 @@ import numba
 import numpy as np
 
 
-#@numba.njit
+@numba.njit
 def map_nodes(x, prop_array,out):
     '''
     Convenience function to remap a value according to a properties array
@@ -33,7 +33,7 @@ def map_nodes(x, prop_array,out):
 
     return out
 
-#@numba.njit
+@numba.njit
 def homogenous_transform(coords,L):
     '''
     Transform into homogenous coordinates and apply linear map, will modify input!
@@ -49,7 +49,7 @@ def homogenous_transform(coords,L):
     return coords
 
 
-#@numba.njit
+@numba.njit
 def meshgrid(x,y,z):
     '''
     Create a mesh-grid using values in x,y,z - all arrays must be of same length
@@ -73,7 +73,7 @@ def meshgrid(x,y,z):
                 counter+=1
     return mg
 
-#@numba.njit
+@numba.njit
 def aabb_voxels(coords):
     '''
     Use axis-aligned boundary box in voxel space to identify candidate voxels
@@ -100,7 +100,7 @@ def aabb_voxels(coords):
     return vox_arr
     
 
-#@numba.njit
+@numba.njit
 def uniform_tet(coords):
     '''
     Argument:
@@ -133,7 +133,7 @@ def uniform_tet(coords):
     return a*coords[0] + s*coords[1] + t*coords[2] + u*coords[3]
 
 
-#@numba.njit
+@numba.njit
 def point_in_vox(point,midpoint,voxdim=1):
     '''
     Arguments:
@@ -159,7 +159,7 @@ def point_in_vox(point,midpoint,voxdim=1):
     else:
         return True
 
-#@numba.njit
+@numba.njit
 def estimate_partial_parcel(coord,vox,parcels,out,n_iter=300):
     '''
     Arguments:
@@ -195,7 +195,7 @@ def estimate_partial_parcel(coord,vox,parcels,out,n_iter=300):
 
 
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def tetrahedral_projection(node_list,coord_arr,ribbon,affine,n_iter=300):
     '''
     Perform tetrahedral projection
