@@ -10,7 +10,6 @@
 ##     5. Comparison to analytical solution for simple 2 voxel test
 ## 
 
-
 import os
 import numpy as np
 from fieldopt import tetrapro
@@ -54,14 +53,13 @@ def gen_fully_embedded_tet(n,shape):
         
     return node_ids, coord_array.flatten()
 
-
-def test_fully_embedded_tets_for_projection():
+def test_1(N=10):
     '''
-    Fully embedded tetrahedron test, full algorithm testing
+    Fully embedded tetrahedron test
     '''
 
-    N = 10
     t = N**3
+
     affine = np.eye(4)
     data_grid = np.ones((N**3),dtype=np.int64).cumsum()
     data_grid = data_grid.reshape((N,N,N))
@@ -71,3 +69,9 @@ def test_fully_embedded_tets_for_projection():
     estimates = tetrapro.tetrahedral_projection(node_list,coord_array,data_grid,affine)
     total_embedding_score = np.max(estimates,axis=0).sum()
     assert int(total_embedding_score) == t
+
+def main():
+    test_1()
+
+if __name__ == '__main__':
+    main()
