@@ -1,17 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
-
-
 import numba
 import numpy as np
 
 
-# In[3]:
-
-
-#Why does parallel break?
 @numba.njit
 def map_nodes(x, prop_array,out):
     '''
@@ -31,8 +24,6 @@ def map_nodes(x, prop_array,out):
     So that array-index based hashing can be used for fast coordinate mapping
     '''
     
-    
-    #Loop
     for i in np.arange(x.shape[0]):
         for j in np.arange(0,x.shape[1]):
             for k in np.arange(0,prop_array.shape[0]):
@@ -42,10 +33,6 @@ def map_nodes(x, prop_array,out):
 
     return out
 
-
-# In[4]:
-
-
 @numba.njit
 def homogenous_transform(coords,L):
     '''
@@ -53,18 +40,13 @@ def homogenous_transform(coords,L):
         coords                              (1x3) array to transform
         L                                   Linear map to apply
     '''
-    #Need to account for weird array behaviour
-    
+
     tmp = np.ones((4,coords.shape[0]),dtype=np.float64)
     tmp[:3,:] = coords.T
-    #tmp = L @ tmp
     tmp = np.dot(L,tmp)
     coords = tmp[:3,:].T
     
     return coords
-
-
-# In[5]:
 
 
 @numba.njit
@@ -90,10 +72,6 @@ def meshgrid(x,y,z):
                 mg[2,counter] = z[k]
                 counter+=1
     return mg
-
-
-# In[6]:
-
 
 @numba.njit
 def aabb_voxels(coords):
@@ -121,10 +99,6 @@ def aabb_voxels(coords):
 
     return vox_arr
     
-
-
-# In[7]:
-
 
 @numba.njit
 def uniform_tet(coords):
@@ -159,9 +133,6 @@ def uniform_tet(coords):
     return a*coords[0] + s*coords[1] + t*coords[2] + u*coords[3]
 
 
-# In[8]:
-
-
 @numba.njit
 def point_in_vox(point,midpoint,voxdim=1):
     '''
@@ -179,18 +150,14 @@ def point_in_vox(point,midpoint,voxdim=1):
     midpoint = midpoint + halfvox
     
     #Checks
-    if (point[0] <= midpoint[0] - halfvox) or (point[0] >= midpoint[0] + halfvox):
+    if (point[0] < midpoint[0] - halfvox) or (point[0] > midpoint[0] + halfvox):
         return False
-    elif (point[1] <= midpoint[1] - halfvox) or (point[1] >= midpoint[1] + halfvox):
+    elif (point[1] < midpoint[1] - halfvox) or (point[1] > midpoint[1] + halfvox):
         return False
-    elif (point[2] <= midpoint[2] - halfvox) or (point[2] >= midpoint[2] + halfvox):
+    elif (point[2] < midpoint[2] - halfvox) or (point[2] > midpoint[2] + halfvox):
         return False
     else:
         return True
-
-
-# In[9]:
-
 
 @numba.njit
 def estimate_partial_parcel(coord,vox,parcels,out,n_iter=300):
@@ -223,8 +190,9 @@ def estimate_partial_parcel(coord,vox,parcels,out,n_iter=300):
                 out[parcels[j]] += 1
                 break
 
-
-# In[10]:
+            #Pathological case of voxel border
+            #Sample again
+            i -= 1
 
 
 @numba.njit(parallel=True)
