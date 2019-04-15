@@ -195,3 +195,14 @@ def test_single_voxel_exclusion():
     #Run projection
     est = tetrapro.tetrahedral_projection(tet_nodes, tet_coords, data_grid, affine, n_iter=1000)
     assert est[0,2] == 0
+
+def test_monte_carlo_approximates_analytical_solution_simple_case():
+    '''
+    Given a 2X1X1 column of voxels, the monte carlo approximation test
+    tests the assertion that using a tetrahedral random sampling method
+    approximates the true analytical volume of the embedded tetrahedron to
+    some epsilon as the number of monte carlo samples approaches very large
+    N
+    '''
+
+    pass
