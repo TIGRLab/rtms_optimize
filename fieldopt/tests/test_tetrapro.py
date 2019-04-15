@@ -174,7 +174,7 @@ def test_single_voxel_exclusion():
     #Single tetrahedron
     tet_nodes = np.array([
         [0,1,2,3]
-        ])
+        ], dtype=np.int)
 
     #Set node coordinates
     tet_coords = np.array([
@@ -182,7 +182,7 @@ def test_single_voxel_exclusion():
         [1.999,1.999,0],
         [0, 1.999, 0.5],        #1 node on bottom-left edge midpoint
         [0, 0, 0.5]             #1 node on top-left edge midpoint
-    ]).flatten()
+    ], dtype=np.float64).flatten()
 
     #Affine transform from array --> coordinate ordering
     affine = np.array([
@@ -190,7 +190,7 @@ def test_single_voxel_exclusion():
         [1,0,0,0],
         [0,0,1,0],
         [0,0,0,1]
-        ])
+        ], dtype=np.float64)
 
     #Run projection
     est = tetrapro.tetrahedral_projection(tet_nodes, tet_coords, data_grid, affine, n_iter=1000)
