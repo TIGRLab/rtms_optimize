@@ -31,7 +31,7 @@ def gen_fully_embedded_tet(n,shape):
     tetrahedral vertices in voxel i,j,k
     '''
 
-    node_ids = np.ones((n,4),dtype=np.int).cumsum().reshape((n,4)) - 1
+    node_ids = np.ones((n,4), dtype=np.int).cumsum().reshape((n,4)) - 1
     coord_array = np.zeros((n*4,3))
     for i in np.arange(0,n):
 
@@ -64,13 +64,13 @@ def test_fully_embedded_tets_for_projection():
     N = 10
     t = N**3
     affine = np.eye(4)
-    data_grid = np.ones((N**3),dtype=np.int64).cumsum()
+    data_grid = np.ones((N**3), dtype=np.int64).cumsum()
     data_grid = data_grid.reshape((N,N,N))
-    data_grid = np.swapaxes(data_grid,0,2)
+    data_grid = np.swapaxes(data_grid, 0, 2)
 
     node_list, coord_array = gen_fully_embedded_tet(t, data_grid.shape)
-    estimates = tetrapro.tetrahedral_projection(node_list,coord_array,data_grid,affine)
-    total_embedding_score = np.max(estimates,axis=0).sum()
+    est = tetrapro.tetrahedral_projection(node_list, coord_array, data_grid, affine, n_iter=1000)
+    total_embedding_score = np.max(est, axis=0).sum()
     assert int(total_embedding_score) == t
 
 
@@ -78,18 +78,17 @@ def test_directional_membership_is_correct():
     '''
     Generate a 3x3x3 cube data grid then test memberships in the following order
     [-x, +x, -y, +y, -z, +z]
+
+    Orientation Info:
+    Since voxel array coordinates don't natively match with the coordinate space used internally
+    we've implicitly transformed the data when assigning memberships in datagrid. 
+
+    Notice that in c_{direction} (x:LR, y:UD, z:IO}) 
+    Then notice that in data_grid X is interpreted to mean LR instead of the usual UD in array format
     '''
 
-    #For each axis make two tetrahedrons
-    updown = np.array([
-        [0,1,2,3],
-        [0,1,2,4]
-        ])
-    leftright = np.array([
-        [0,1,2,3],
-        [0,1,2,4]
-        ])
-    inout = np.array([
+    #Node IDs are the same across coordinate sets
+    node_ids = np.array([
         [0,1,2,3],
         [0,1,2,4]
         ])
@@ -139,9 +138,9 @@ def test_directional_membership_is_correct():
     affine = np.eye(4)
 
     #Run projection algorithm
-    ud_est = tetrapro.tetrahedral_projection(updown, c_updown, data_grid, affine)
-    lr_est = tetrapro.tetrahedral_projection(leftright, c_leftright, data_grid, affine)
-    io_est = tetrapro.tetrahedral_projection(inout, c_inout, data_grid, affine)
+    ud_est = tetrapro.tetrahedral_projection(node_ids, c_updown, data_grid, affine, n_iter=1000)
+    lr_est = tetrapro.tetrahedral_projection(node_ids, c_leftright, data_grid, affine, n_iter=1000)
+    io_est = tetrapro.tetrahedral_projection(node_ids, c_inout, data_grid, affine, n_iter=1000)
 
     #Test each
     assert ud_est[0,1] != 0
@@ -150,3 +149,49 @@ def test_directional_membership_is_correct():
     assert lr_est[1,4] != 0
     assert io_est[0,5] != 0
     assert io_est[1,6] != 0
+
+def test_single_voxel_exclusion():
+    '''
+    Given a 2X2X1 slab of voxels, the single voxel exclusion test tests the
+    assertion that a tetrahedron with nodes rooted at two corner points and
+    opposing edge mid-points will be embedded in 3/4 voxels. The
+    voxel containing 0 nodes should have no tetrahedral volume but will
+    always be included in the bounding box enclosure.
+
+    Orientation Details:
+    In voxel/array space X refers to rows, Y refers to columns and Z is depthwise
+    In coordinate space the roles of X and Y are switched. X is the LR axis, Y is the SI axis
+
+    The affine transform solves this discrepancy between coordinate space and array/voxel space
+    '''
+
+    #Make slab
+    data_grid = np.ones( (2,2,1), dtype=np.int)
+
+    #Set exclusion voxel (top right)
+    data_grid[0,1,0] = 2
+
+    #Single tetrahedron
+    tet_nodes = np.array([
+        [0,1,2,3]
+        ])
+
+    #Set node coordinates
+    tet_coords = np.array([
+        [1.999,1.999,0.999],    #2 nodes at each bottom-right corner
+        [1.999,1.999,0],
+        [0, 1.999, 0.5],        #1 node on bottom-left edge midpoint
+        [0, 0, 0.5]             #1 node on top-left edge midpoint
+    ]).flatten()
+
+    #Affine transform from array --> coordinate ordering
+    affine = np.array([
+        [0,1,0,0],
+        [1,0,0,0],
+        [0,0,1,0],
+        [0,0,0,1]
+        ])
+
+    #Run projection
+    est = tetrapro.tetrahedral_projection(tet_nodes, tet_coords, data_grid, affine, n_iter=1000)
+    assert est[0,2] == 0
