@@ -41,12 +41,15 @@ def homogenous_transform(coords,L):
         L                                   Linear map to apply
     '''
 
-    tmp = np.ones((4,coords.shape[0]),dtype=np.float64)
-    tmp[:3,:] = coords.T
-    tmp = np.dot(L,tmp)
-    coords = tmp[:3,:].T
-    
-    return coords
+    #tmp = np.ones((4,coords.shape[0]),dtype=np.float64)
+    #tmp[:3,:] = coords.T
+    #tmp = np.dot(L,tmp)
+    #coords = tmp[:3,:].T
+
+    #Simpler implementation
+    coords = np.dot(L[:3,:3],coords.T)
+    coords += L[:3,3:4]
+    return coords.T
 
 
 @numba.njit
