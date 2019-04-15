@@ -182,16 +182,20 @@ def estimate_partial_parcel(coord,vox,parcels,out,n_iter=300):
     
     #Perform fixed monte carlo sampling
     for i in np.arange(0,n_iter):
+
+        resample = True
         p = uniform_tet(coord)
         for j in np.arange(0,vox.shape[1]):
-            
+
             #If point is in voxel, then move on
             if point_in_vox(p+t, vox[:,j]):
+                resample = False
                 out[parcels[j]] += 1
                 break
 
-            #Pathological border case, resample point
+        if resample:
             i -= 1
+
 
 
 
