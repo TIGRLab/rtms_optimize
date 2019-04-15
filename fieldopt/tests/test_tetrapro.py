@@ -74,26 +74,55 @@ def test_fully_embedded_tets_for_projection():
     assert int(total_embedding_score) == t
 
 
-def test_border_cases_get_rejected():
+def test_directional_membership_is_correct(): 
+    '''
+    Generate a 3x3x3 cube data grid then test memberships in the following order
+    [-x, +x, -y, +y, -z, +z]
+    '''
 
-    #Test along each dimension
-    test_lowx = np.array([0,0.25,0.231])
-    test_highx = np.array([1,0.13,0.003])
+    #Generate test nodes and associated coordinates
+    n = 6
+    node_ids = np.zeros( (n,4), dtype=np.int).reshape((n,4)) 
+    node_ids[:,0] = 0
+    node_ids[:,1] = 1
+    node_ids[:,2] = 2
+    node_ids[:,3] = np.arange(3,n)
 
-    test_lowy = np.array([0.23,0,0.1231])
-    test_highy = np.array([0.89,1,0.001])
+    #Fix 3 nodes
+    
+    
+    #Generate random coordinates within central voxel of 3x3x3 cube
+    coord_array = np.random.random(size=(4*n,3)) + 1
 
-    test_lowz = np.array([0.101241, 0.231, 0])
-    test_highz = np.array([0.789, 0.341, 1])
+    #Perform single node shifting according to order in func docstring
+    coord_array[0,0] -= 1
+    coord_array[4,0] += 1
+    coord_array[8,1] -= 1
+    coord_array[12,1] += 1
+    coord_array[16,2] -= 1
+    coord_array[20,2] += 1
+    coord_array = coord_array.flatten()
 
-    vox = np.array([0,0,0])
+    #Make data grid and write values in testing region
+    data_grid = np.zeros( (3,3,3), dtype=np.int64)
 
-    #Run test batch
-    assert tetrapro.point_in_vox(test_lowx, vox)
-    assert tetrapro.point_in_vox(test_highx, vox)
+    #Cetral point
+    data_grid[1,1,1] = 0
 
-    assert tetrapro.point_in_vox(test_lowy, vox)
-    assert tetrapro.point_in_vox(test_lowy, vox)
+    #Test points
+    data_grid[1,0,1] = 1
+    data_grid[1,2,1] = 2
+    data_grid[0,1,1] = 3
+    data_grid[2,1,1] = 4
+    data_grid[1,1,0] = 5
+    data_grid[1,1,2] = 6
 
-    assert tetrapro.point_in_vox(test_highz, vox)
-    assert tetrapro.point_in_vox(test_highz, vox)
+    #Basic affine
+    affine = np.eye(4)
+
+    #Run projection algorithm
+    estimates = tetrapro.tetrahedral_projection(node_ids,coord_array,data_grid,affine)
+
+    import pdb; pdb.set_trace()
+    for i,e in enumerate(estimates):
+        assert e[i+1] != 0
