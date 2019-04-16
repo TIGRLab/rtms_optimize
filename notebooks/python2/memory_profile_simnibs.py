@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
 import os
+import gc
 import objgraph
-import gmsh
-import numpy as np
 from simnibs.msh import gmsh_numpy as simgmsh
-from fieldopt import geolib
 
 proj_dir = '/projects/jjeyachandra/rtms_optimize'
 local_dir=os.path.join(proj_dir,'data','simnibs_output')
@@ -20,12 +18,14 @@ pathfem = os.path.join(proj_dir,'objective_grid','grid','sim_{}'.format(i+3000))
 field_file=os.path.join(pathfem,'sub-CMH090_TMS_1-0001_Magstim_70mm_Fig8_nii_scalar.msh')
 
 objgraph.show_most_common_types(limit=50)
-for i in np.arange(0,100):
+for i in np.arange(0,20):
 
     #GC.COLLECT() needed to deal with circular referencing in Python API for simnibs
-    gc.collect()
+    #gc.collect()
     msh = simgmsh.read_msh(field_file)
 
 objgraph.show_most_common_types(limit=50)
+obj = objgraph.by_type('Msh')[0]
+objgraph.show_backrefs(obj, max_depth=10, filename='./Msh_backref.png')
 
 
