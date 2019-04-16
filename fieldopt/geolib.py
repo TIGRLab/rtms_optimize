@@ -35,7 +35,7 @@ def rotate_vec2vec(v1,v2):
     n = np.cross(v1,v2)
     sinv = np.linalg.norm(n)
     cosv = np.dot(v1,v2)
-    R = np.eye(3) + skew(n) + np.matmul(skew(n),skew(n))*(1 - cosv)/(sinv**2) 
+    R = np.eye(3) + skew(n) + np.matmul(skew(n),skew(n))*(1 - cosv)/(sinv**2)
     return R
 
 def quad_fit(X,b):
@@ -51,7 +51,7 @@ def quad_fit(X,b):
         np.ones((X.shape[0],1)),
         X[:,:2],
         np.prod(X[:,:2],axis=1),
-        X[:,:2]**2        
+        X[:,:2]**2
     ]
 
     C, _, _, _ = lstsq(A,b)
@@ -178,7 +178,7 @@ def map_rot_2_surf(x,y,t,C):
 
     return pp, n
 
-def load_gmsh_nodes(gmshpath):
+def load_gmsh_nodes(gmshpath, entity):
     '''
     Given a fullpath to some .msh file, load in the mesh nodes IDs, triangles and coordinates.
 
