@@ -243,12 +243,14 @@ def get_field_subset(field_msh, tag_list):
     normE      --  List of electric field norms (magnitudes) subsetted according to tag_list
     '''
 
+    #TODO: IMPLEMENT GARBAGE COLLECTION!
     msh = simgmsh.read_msh(field_msh)
     norm_E = msh.elmdata[1].value
     return norm_E[tag_list]
 
 
 
+## SIMPLIFY FUNCTION OR REMOVE?
 def compute_field_score(normE, proj_map, parcel):
     '''
     From a list of field magnitudes in <normE> compute the weighted sum determined
