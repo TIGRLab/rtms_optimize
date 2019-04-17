@@ -3,7 +3,7 @@
 
 import os
 import numpy as np
-from backports import tempfile #python 2 workaround for lack of context
+from backports import tempfile #python 2 workaround for lack of context in tempfile
 from fieldopt import geolib
 from simnibs import sim_struct, run_simulation
 
@@ -22,7 +22,8 @@ class FieldFunc():
 
     '''
 
-    def __init__(self, mesh_file, quad_surf_consts, surf_to_mesh_matrix, tet_weights, field_dir, coil):
+    def __init__(self, mesh_file, quad_surf_consts,
+            surf_to_mesh_matrix, tet_weights, field_dir, coil):
         '''
         Standard constructor
         Arguments:
@@ -41,6 +42,15 @@ class FieldFunc():
         self.field_dir = field_dir
         self.coil = coil
 
+    def __repr__(self):
+        '''
+        print(FieldFunc)
+        '''
+
+        print('Mesh:', self.mesh)
+        print('Coil:', self.coil)
+        print('Field Directory:', self.field_dir)
+        return
 
     def _transform_input(self, x, y, theta):
         '''
@@ -65,14 +75,13 @@ class FieldFunc():
 
         S = sim_struct.SESSION()
         S.fnamehead = self.mesh
-        S.pathfem = self._startup_simulation
+        S.pathfem = sim_dir
 
         tms = S.add_tmslist()
         tms.fnamecoil = self.coil
 
         pos = tms.add_position()
-        pos.matsimnibs = self._transform_input(x,y,theta)
-
+        pos.matsimnibs = matsimnibs
         run_simulation(S)
 
     def _get_sim_result(self,sim_dir):
@@ -93,7 +102,7 @@ class FieldFunc():
         Given a simulation output file, compute the score
         '''
 
-        _, elem_ids, _ = geolib.load_gmsh_elems(sim_file, FIELD_ENTITY)
+        _, elem_ids, _ = geolib.load_gmsh_elems(sim_file, self.FIELD_ENTITY)
         normE = geolib.get_field_subset(sim_file, elem_ids)
         return np.dot(self.tw, normE)
 
@@ -112,6 +121,6 @@ class FieldFunc():
 
             #EXTRACT SCORE USING WEIGHTS
             sim_file = self._get_sim_result(sim_dir)
-            score = self_calculate_score(sim_file)
+            score = self._calculate_score(sim_file)
 
         return score
