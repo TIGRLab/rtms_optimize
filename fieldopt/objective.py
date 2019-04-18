@@ -70,7 +70,9 @@ class FieldFunc():
 
     def _run_simulation(self, matsimnibs, sim_dir):
         '''
-        Run a simulation
+        Arguments:
+            matsimnibs                  Coil orientation matrix (simnibs specification)
+            sim_dir                     Directory to perform simulation experiment
         '''
 
         S = sim_struct.SESSION()
@@ -82,11 +84,12 @@ class FieldFunc():
 
         pos = tms.add_position()
         pos.matsimnibs = matsimnibs
-        run_simulation(S)
+        sim_files = S.run_simulatons()
+        return sim_files[0]
 
-    def _get_sim_result(self,sim_dir):
+    def _get_sim_result(self,sim_files):
         '''
-        Returns the simulation .msh file
+        Search for simulation file in experiment directory and return if found
         '''
 
         try:
@@ -115,12 +118,8 @@ class FieldFunc():
 
         with tempfile.TemporaryDirectory(dir=self.field_dir) as sim_dir:
 
-            #RUN SIMULATION
             matsimnibs = self._transform_input(x,y,theta)
-            self._run_simulation(matsimnibs, sim_dir)
-
-            #EXTRACT SCORE USING WEIGHTS
-            sim_file = self._get_sim_result(sim_dir)
+            sim_file = self._run_simulation(matsimnibs, sim_dir)
             score = self._calculate_score(sim_file)
 
         return score
