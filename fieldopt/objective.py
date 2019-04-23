@@ -2,10 +2,13 @@
 # coding: utf-8
 
 import os
+import gc
+
 import numpy as np
 from backports import tempfile #python 2 workaround for lack of context in tempfile
 from fieldopt import geolib
 from simnibs import sim_struct, run_simulation
+from functools import wraps
 
 class FieldFunc():
 
@@ -23,7 +26,8 @@ class FieldFunc():
     '''
 
     def __init__(self, mesh_file, quad_surf_consts,
-            surf_to_mesh_matrix, tet_weights, field_dir, coil):
+            surf_to_mesh_matrix, tet_weights, field_dir, coil,
+            cpus=1):
         '''
         Standard constructor
         Arguments:
@@ -41,6 +45,8 @@ class FieldFunc():
         self.tw = tet_weights
         self.field_dir = field_dir
         self.coil = coil
+        self.cpus = cpus
+
 
     def __repr__(self):
         '''
@@ -50,7 +56,7 @@ class FieldFunc():
         print('Mesh:', self.mesh)
         print('Coil:', self.coil)
         print('Field Directory:', self.field_dir)
-        return
+        return ''
 
     def _transform_input(self, x, y, theta):
         '''
@@ -82,10 +88,18 @@ class FieldFunc():
         tms = S.add_tmslist()
         tms.fnamecoil = self.coil
 
-        pos = tms.add_position()
-        pos.matsimnibs = matsimnibs
-        sim_files = S.run_simulatons()
-        return sim_files[0]
+        for i in np.arange(0,len(matsimnibs)):
+            p = sim_struct.POSITION()
+            p.matsimnibs = matsimnibs[i]
+            tms.add_position(p)
+
+        sim_files = S.run_simulatons(cpus=self.cpus)
+
+        #Needed since simNIBS is bad about circular referencing
+        del S
+        del tms
+        gc.collect()
+        return sorted(sim_files)
 
     def _calculate_score(self, sim_file):
         '''
@@ -96,20 +110,22 @@ class FieldFunc():
         normE = geolib.get_field_subset(sim_file, elem_ids)
         return np.dot(self.tw, normE)
 
+    def evaluate(self, input_list):
 
-    def evaluate(self, x, y, theta):
         '''
         Given a quadratic surface input (x,y) and rotational interpolation angle (theta)
         compute the resulting field score over a region of interest
         Arguments:
-            (x,y)                           Surface coordinates of quadratic approximation
-            theta                           Rotational interpolation [0-180]
+            [(x,y,theta),...]                   A iterable of iterable (x,y,theta)
+
+        Returns:
+            scores                              An array of scores in order of inputs
         '''
 
         with tempfile.TemporaryDirectory(dir=self.field_dir) as sim_dir:
 
-            matsimnibs = self._transform_input(x, y, theta)
-            sim_file = self._run_simulation(matsimnibs, sim_dir)
-            score = self._calculate_score(sim_file)
+            matsimnibs = [self._transform_input(x,y,t) for x,y,t in input_list]
+            sim_files = self._run_simulation(matsimnibs, sim_dir)
+            scores = np.array([self._calculate_score(s) for s in sim_files])
 
-        return score
+        return scores

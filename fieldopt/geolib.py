@@ -7,6 +7,7 @@ import numpy as np
 from scipy.linalg import lstsq
 import gmsh
 from simnibs.msh import gmsh_numpy as simgmsh #simnibs gmsh wrapper module
+import numba
 
 def skew(vector):
     """
@@ -249,7 +250,6 @@ def get_field_subset(field_msh, tag_list):
     return norm_E[tag_list]
 
 
-
 ## SIMPLIFY FUNCTION OR REMOVE?
 def compute_field_score(normE, proj_map, parcel):
     '''
@@ -268,3 +268,136 @@ def compute_field_score(normE, proj_map, parcel):
 
     parcel_map = proj_map[:,parcel]
     return np.dot(parcel_map,normE)
+
+
+#### VERTEX/TRIANGLES ON MESH ROUTINES 
+
+@numba.njit(parallel=True)
+def get_relevant_triangles(verts,triangles):
+    '''
+    From an array of vertices and triangles, get triangles that contain at least 1 vertex
+    Arguments:
+        verts                               1-D array of vertex IDs
+        triangles                           (NX3) array of triangles, where each column is a vertex
+    Output:
+        t_arr                               True of triangle contains at least one vertex from list
+    '''
+
+    t_arr = np.zeros((triangles.shape[0]),dtype=np.int64)
+
+    for t in numba.prange(0,triangles.shape[0]):
+        for c in np.arange(0,3):
+            for v in verts:
+                
+                if triangles[t][c] == v:
+                    t_arr[t] = 1
+                    break
+
+            if t_arr[t] == 1:
+                break
+
+    return t_arr
+
+@numba.njit
+def unitize_arr(arr):
+    '''
+    Normalize array row-wise
+    '''
+
+    narr = np.zeros((arr.shape[0],3),dtype=np.float64)
+
+    for i in np.arange(0,arr.shape[0]):
+        narr[i] = arr[i,:]/np.linalg.norm(arr[i,:])
+
+    return narr
+
+@numba.njit
+def cross(a,b):
+    '''
+    Compute cross product between two vectors
+    Uses: Numpy's latest cross product routine
+    Arguments:
+        a,b                                 1D arrays
+
+    Output:
+        Cross product 1D array
+    '''
+
+    out = np.zeros(3,dtype=np.float64)
+
+    out[0] = a[1]*b[2]
+    tmp = a[2]*b[1]
+    out[0] -= tmp
+
+    out[1] = a[2]*b[0]
+    tmp = a[0]*b[2]
+    out[1] -= tmp
+
+    out[2] = a[0]*b[1]
+    tmp = a[1]*b[0]
+    out[2] -= tmp
+
+    return out
+
+@numba.njit
+def get_vert_norms(trigs,coords):
+    '''
+    Compute vertex normals using cumulative normalization trick
+    Arguments:
+        trigs                               Array of triangles with normalized values 
+                                            range(1,size(unique(trigs)))
+        coords                              Array of coordinates (vals in trigs correspond to inds in coords)
+    Output:
+        norm_arr                            Array of norm vectors
+    '''
+
+    cnorm_arr = np.zeros((coords.shape[0],3), dtype=np.float64)
+    for i in np.arange(0,trigs.shape[0]):
+
+        iv1 = trigs[i,0]
+        iv2 = trigs[i,1]
+        iv3 = trigs[i,2]
+
+        v1 = coords[iv1,:]
+        v2 = coords[iv2,:]
+        v3 = coords[iv3,:]
+
+        c = cross(v2-v1,v3-v1)
+
+        cnorm_arr[iv1,:] += c
+        cnorm_arr[iv2,:] += c
+        cnorm_arr[iv3,:] += c
+
+    norm_arr = unitize_arr(cnorm_arr)
+    return norm_arr
+
+@numba.njit(parallel=True)
+def get_subset_triangles(verts,triangles):
+    '''
+    From an array of vertices and triangles, get the triangles that contain all vertices
+    Arguments:
+        verts                                   1-D array of vertex IDs
+        triangles                               (Nx3) array of triangles where each column is a vertex
+
+    Output:
+        t_arr                                   Nx1 Boolean array where indices correspond to
+                                                triangles. True if all 3 vertices of triangle
+                                                found in verts
+    '''
+
+    t_arr = np.zeros( (triangles.shape[0]), dtype=np.int64)
+
+    for t in numba.prange(0,triangles.shape[0]):
+        for c in np.arange(0,3):
+            for v in verts:
+
+                if triangles[t][c] == v:
+                    t_arr[t] += 1
+                    break
+
+        if t_arr[t] == 3:
+            t_arr[t] = 1
+        else:
+            t_arr[t] = 0
+
+    return t_arr
