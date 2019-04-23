@@ -59,13 +59,13 @@ class FieldFunc():
         '''
 
         preaff_loc = geolib.map_param_2_surf(x,y,self.C)
-        preaff_rot, preaff_norm = geolib.map_rot_2_surf(x,y,theta,self.C)
+        preaff_rot, preaff_norm = geolib.map_rot_2_surf(x, y, theta, self.C)
 
         loc = np.matmul(self.iR, preaff_loc)
         rot = np.matmul(self.iR, preaff_rot)
         n = np.matmul(self.iR, preaff_norm)
 
-        o_matrix = geolib.define_coil_orientation(loc,rot,n)
+        o_matrix = geolib.define_coil_orientation(loc, rot, n)
         return o_matrix
 
     def _run_simulation(self, matsimnibs, sim_dir):
@@ -87,19 +87,6 @@ class FieldFunc():
         sim_files = S.run_simulatons()
         return sim_files[0]
 
-    def _get_sim_result(self,sim_files):
-        '''
-        Search for simulation file in experiment directory and return if found
-        '''
-
-        try:
-            sim_result =  [f for f in os.listdir(sim_dir) if '_scalar.msh' in f][0]
-        except IndexError:
-            print('No simulation file found! Exiting')
-            raise
-
-        return os.path.join(sim_dir, sim_result)
-
     def _calculate_score(self, sim_file):
         '''
         Given a simulation output file, compute the score
@@ -114,11 +101,14 @@ class FieldFunc():
         '''
         Given a quadratic surface input (x,y) and rotational interpolation angle (theta)
         compute the resulting field score over a region of interest
+        Arguments:
+            (x,y)                           Surface coordinates of quadratic approximation
+            theta                           Rotational interpolation [0-180]
         '''
 
         with tempfile.TemporaryDirectory(dir=self.field_dir) as sim_dir:
 
-            matsimnibs = self._transform_input(x,y,theta)
+            matsimnibs = self._transform_input(x, y, theta)
             sim_file = self._run_simulation(matsimnibs, sim_dir)
             score = self._calculate_score(sim_file)
 
