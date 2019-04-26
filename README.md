@@ -6,9 +6,9 @@ Repo for building rTMS coil optimization method
 
 ## TO-DO:
 
-- [ ] Develop framework surrounding handling of file IO of simulation files and scoring
+- [x] Develop framework surrounding handling of file IO of simulation files and scoring
 - [ ] Wrap surface parameterization of local patches into geolib library function (extract_surface_patch notebook)
-- [ ] Write up Bayesian Optimization component within a module (rtms_optimize notebook)
+- [x] Write up Bayesian Optimization component within a module (rtms_optimize notebook)
 - [ ] Implement extensive unit testing of geolib notebook
 - [ ] Look into tetrapro's weird behaviour generating values that are very slightly greater than 1 (might be due to resampling)
 
