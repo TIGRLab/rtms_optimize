@@ -14,6 +14,11 @@ RUN apt-get update && \
 	libboost-all-dev \
 	libblas-dev \
 	liblapack-dev \
+	libglu1 \
+	libxrender-dev \
+	libxcursor1 \
+	libxft2 \
+	libxinerama1 \
 	gfortran && \
 	git clone https://github.com/wujian16/Cornell-MOE.git
 
