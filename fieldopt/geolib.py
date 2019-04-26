@@ -4,6 +4,7 @@
 # Library of useful geometry functions
 
 import numpy as np
+import gc
 from scipy.linalg import lstsq
 import gmsh
 from simnibs.msh import gmsh_numpy as simgmsh #simnibs gmsh wrapper module
@@ -244,9 +245,11 @@ def get_field_subset(field_msh, tag_list):
     normE      --  List of electric field norms (magnitudes) subsetted according to tag_list
     '''
 
-    #TODO: IMPLEMENT GARBAGE COLLECTION!
     msh = simgmsh.read_msh(field_msh)
     norm_E = msh.elmdata[1].value
+
+    del msh
+    gc.collect()
     return norm_E[tag_list]
 
 
