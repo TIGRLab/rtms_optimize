@@ -103,10 +103,13 @@ RUN apt-get update -qq \
     && sed -i '$isource $FSLDIR/etc/fslconf/fsl.sh' $ND_ENTRYPOINT \
     && echo "Installing FSL conda environment ..." \
     && bash /opt/fsl-5.0.11/etc/fslconf/fslpython_install.sh -f /opt/fsl-5.0.11 \
-    && mkdir /mri2mesh
+    && mkdir /mri2mesh \
+    && mkdir -p /mri2mesh/resources/templates
+
 
 # SET UP MINIMAL SIMNIBS COMPONENTS
 COPY ./simnibs/bin /mri2mesh/bin
 COPY ./simnibs/Bash_modules /mri2mesh/Bash_modules
-ENV SIMNIBSDIR=/mri2mesh
-
+COPY ./simnibs/resources/templates/CC_filterkernel.nii.gz /mri2mesh/resources/templates/CC_filterkernel.nii.gz
+ENV	SIMNIBSDIR=/mri2mesh \
+	PATH=$PATH:/mri2mesh/Bash_modules
