@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# Helper script to extract a spatially-contiguous ROI from the Yeo17 MS-HBM parcellation scheme
+# INPUTS:
+# (1) an ROI metric in fs_LR_32k space derived from spatial priors (.shape.gii)
+# (2) an input MS-HBM parcellation .shape.gii
+# (3) the output file in which to store the spatial clustering
+# (4) The network key of interest (use wb_command -file-information on MS-HBM)
+#
+# WORKFLOW:
+# (1) Extract the network of interest from MS-HBM parcellation
+# (2) Apply spatial clustering 
+# (3) Compute intersection between spatial prior ROI and spatially clustered MS-HBM
+# (4) Compute the MODE of the region entrapped in the intersection between the two maps
+#
+# OUTPUT:
+# File containing spatially contiguous mask that most overlaps with selected ROI from spatial prior
+#
+#
+# DESCRIPTION:
+# The assumption is that since MS-HBM is biased by the spatial prior
+# The intersection between the spatial prior and MS-HBM parcellation will likely yield the corresponding ROI
+# since spatial distributions of ROIs are derived from the spatial prior
+# You should verify the outputs of this script since this behaviour is not guaranteed!
+
+prior_roi=$1
+mshbm=$2
+output=$3
+key=$4
+tmpdir=$(mktemp -d "/tmp/extract_roi.XXXXX")
+inp="$mshbm"
+
+cleanup (){
+
+	rm -rf "$tmpdir"
+
+}
+
+trap cleanup EXIT 
+
+#If 4rd argument exists use it!
+if [ -z "$key" ] ; then
+
+	#Extract network - will produce more robust result
+	inp="$tmpdir"/extracted_label.shape.gii
+	wb_command -gifti-label-to-roi "$mshbm" -key "$4" "$inp"
+
+fi
+
+#Spatially contiguous clustering
+wb_command -metric-find-clusters "$inp" \
+	0.5 4 "$tmpdir"/clust_roi.shape.gii
+
+#Intersect
+wb_command -metric-mask "$tmpdir"/clust_roi.shape.gii \
+	"$prior_roi" \
+	"$tmpdir"/intersect.shape.gii
+
+#Extract value
+roi_value=$(wb_command -metric-stats "$tmpdir"/clust_roi.shape.gii \
+	-reduce MODE \
+	-roi "$tmpdir"/intersect.shape.gii)
+
+#Generate ROI based off extracted feature
+wb_command -gifti-label-to-roi "$tmpdir"/clust_roi.shape.gii \
+	-key "$roi_value" \
+	"$output"
