@@ -116,7 +116,7 @@ COPY ./simnibs/resources/templates/CC_filterkernel.nii.gz /mri2mesh/resources/te
 COPY ./simnibs/Python_modules /mri2mesh/Python_modules
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends \
-	python python-pip python-setuptools \
+	python python-pip python-setuptools libpython2.7 \
 	&& pip install numpy scipy nibabel \
 	&& rm /mri2mesh/bin/gmsh \
 	&& ln -s /mri2mesh/bin/linux/gmsh /mri2mesh/bin/gmsh 
