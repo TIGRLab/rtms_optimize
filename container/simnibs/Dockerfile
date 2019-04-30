@@ -122,7 +122,7 @@ RUN apt-get update \
 	&& ln -s /mri2mesh/bin/linux/gmsh /mri2mesh/bin/gmsh 
 
 #DEBUGGING
-RUN apt-get install vim
+RUN apt-get install -y --no-install-recommends vim
 
 ENV	SIMNIBSDIR=/mri2mesh \
 	PATH=$PATH:/mri2mesh/Bash_modules \
